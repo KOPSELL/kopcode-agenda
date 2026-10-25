@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import type { FormEvent } from 'react'
 import {
   ArrowRight, CalendarDays, CheckCircle2, Clock3, Copy, LogOut,
   Menu, Plus, Scissors, Settings, Share2, ShieldCheck, Users, Wallet,
@@ -139,7 +140,7 @@ function App() {
     if (session?.user?.id) await loadDashboard(session.user.id)
   }
 
-  const doAuth = async (event: React.FormEvent) => {
+  const doAuth = async (event: FormEvent) => {
     event.preventDefault()
     setBusy(true); setError(''); setNotice('')
     try {
