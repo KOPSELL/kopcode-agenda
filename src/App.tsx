@@ -1,145 +1,334 @@
-import { useEffect, useState } from 'react'
-import { isSupabaseConfigured, supabase } from './lib/supabase'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
-  ArrowDownRight, ArrowRight, Bell, CalendarDays, Check, CheckCircle2,
-  ChevronDown, Clock3, Menu, Scissors, ShieldCheck,
-  Sparkles, TrendingUp, Users, Wallet, X, Zap
+  ArrowLeft, ArrowRight, CalendarDays, CheckCircle2, Clock3, Copy, LogOut,
+  Menu, Plus, Scissors, Settings, Share2, ShieldCheck, Trash2, Users, Wallet,
+  X, LoaderCircle, ExternalLink, Link as LinkIcon, LayoutDashboard, CalendarCheck,
+  Store, CircleDollarSign, Sparkles
 } from 'lucide-react'
+import { supabase } from './lib/supabase'
 
-const plans = [
-  { name: 'Essencial', price: '29,90', note: 'Para começar com organização', features: ['Link de agendamento próprio', 'Agenda online', 'Cadastro de serviços', 'Lembretes básicos'], featured: false },
-  { name: 'Profissional', price: '49,90', note: 'Para barbearias em crescimento', features: ['Tudo do Essencial', 'Equipe e múltiplos barbeiros', 'Gestão de clientes', 'Relatórios financeiros', 'Notificações de agendamento'], featured: true },
-  { name: 'Premium', price: '89,90', note: 'Mais controle para sua operação', features: ['Tudo do Profissional', 'Indicadores avançados', 'Gestão de despesas', 'Mais opções de personalização', 'Suporte prioritário'], featured: false },
-]
+type Shop = { id: string; name: string; slug: string; phone?: string | null; timezone?: string }
+type Barber = { id: string; name: string; active: boolean }
+type Service = { id: string; name: string; description?: string | null; price: number; duration_minutes: number; active: boolean }
+type Appointment = {
+  id: string; client_name: string; client_phone: string; starts_at: string; ends_at: string;
+  status: 'pending' | 'confirmed' | 'cancelled' | 'completed' | 'no_show';
+  barber_id: string; service_id: string; notes?: string | null
+}
+type PublicShop = Shop & { services: Service[]; barbers: Barber[] }
+type Tab = 'overview' | 'appointments' | 'barbers' | 'services' | 'settings'
+const money = (value: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(value || 0))
+const localDate = (d: Date) => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit', day: '2-digit' }).format(d)
+const formatDate = (value: string) => new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeZone: 'America/Sao_Paulo' }).format(new Date(value))
+const formatTime = (value: string) => new Intl.DateTimeFormat('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' }).format(new Date(value))
+const slugify = (value: string) => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+const messageOf = (error: unknown) => error instanceof Error ? error.message : 'Ocorreu um erro. Tente novamente.'
+const today = () => localDate(new Date())
 
-function DashboardPreview() {
-  return (
-    <div className="dashboard-wrap" aria-label="Prévia ilustrativa do painel">
-      <div className="dashboard-glow" />
-      <div className="dashboard">
-        <aside className="dash-sidebar">
-          <div className="brand brand-small"><span className="brand-mark"><Scissors size={17} /></span><span>agenda<span className="brand-accent">kopcode</span></span></div>
-          <div className="dash-shop"><div className="shop-avatar">B</div><div><strong>Barbearia Modelo</strong><small>Painel de gestão</small></div><ChevronDown size={14} /></div>
-          <div className="dash-nav active"><CalendarDays size={16} /> Visão geral</div>
-          <div className="dash-nav"><Clock3 size={16} /> Agendamentos</div>
-          <div className="dash-nav"><Users size={16} /> Clientes</div>
-          <div className="dash-nav"><Scissors size={16} /> Serviços</div>
-          <div className="dash-nav"><Wallet size={16} /> Financeiro</div>
-          <div className="dash-side-bottom"><ShieldCheck size={15} /> Espaço da sua barbearia</div>
-        </aside>
-        <main className="dash-main">
-          <div className="dash-top"><div><span className="eyebrow">SEGUNDA-FEIRA, 26 DE OUTUBRO</span><h3>Bom dia! 👋</h3><p>Aqui está o resumo da sua barbearia.</p></div><div className="dash-bell"><Bell size={17} /><i /></div></div>
-          <div className="stats-grid">
-            <div className="stat-card"><span>Agendamentos hoje</span><CalendarDays size={16} /><strong>12</strong><small className="stat-positive"><TrendingUp size={12} /> Dia em andamento</small></div>
-            <div className="stat-card"><span>Faturamento do mês</span><Wallet size={16} /><strong>R$ 4.280</strong><small className="stat-muted">Visão ilustrativa</small></div>
-            <div className="stat-card"><span>Clientes</span><Users size={16} /><strong>186</strong><small className="stat-muted">Sua base de clientes</small></div>
-          </div>
-          <div className="agenda-panel">
-            <div className="panel-heading"><div><h4>Próximos horários</h4><p>Uma visão rápida do dia</p></div><span className="today-pill">Hoje <ChevronDown size={12} /></span></div>
-            <div className="appointment"><span className="appointment-time">09:00</span><span className="appointment-avatar avatar-one">RM</span><span className="appointment-person"><strong>Rafael Martins</strong><small>Corte tradicional · João</small></span><span className="status confirmed">Confirmado</span></div>
-            <div className="appointment"><span className="appointment-time">09:30</span><span className="appointment-avatar avatar-two">LC</span><span className="appointment-person"><strong>Lucas Costa</strong><small>Corte + barba · Pedro</small></span><span className="status confirmed">Confirmado</span></div>
-            <div className="appointment"><span className="appointment-time">10:15</span><span className="appointment-avatar avatar-three">AF</span><span className="appointment-person"><strong>André Ferreira</strong><small>Barba · João</small></span><span className="status pending">Aguardando</span></div>
-          </div>
-          <div className="dash-footnote"><span className="pulse-dot" /> Prévia demonstrativa — dados fictícios</div>
-        </main>
-      </div>
-      <div className="float-card float-notification"><div className="float-icon"><Bell size={17} /></div><div><strong>Novo agendamento</strong><span>Seu próximo cliente está marcado.</span></div><CheckCircle2 size={17} className="float-check" /></div>
-      <div className="float-card float-growth"><span className="growth-icon"><TrendingUp size={17} /></span><div><strong>Mais organização.</strong><span>Mais tempo para atender.</span></div></div>
-    </div>
-  )
+function Brand({ light = false }: { light?: boolean }) {
+  return <div className={light ? 'brand brand-light' : 'brand'}><span className="brand-mark"><Scissors size={19} /></span><span>agenda<span className="brand-accent">kopcode</span></span></div>
 }
 
 function App() {
-  const [menuOpen, setMenuOpen] = useState(false)
-  const [faqOpen, setFaqOpen] = useState<number | null>(0)
-  const [selectedPlan, setSelectedPlan] = useState('Profissional')
-  const [noticeOpen, setNoticeOpen] = useState(false)
-  const [backendStatus, setBackendStatus] = useState<'checking' | 'ready' | 'missing' | 'error'>('checking')
+  const pathParts = window.location.pathname.split('/').filter(Boolean)
+  const publicSlug = pathParts[0] === 'b' ? pathParts[1] : null
+  const [session, setSession] = useState<any>(null)
+  const [authReady, setAuthReady] = useState(false)
+  const [authMode, setAuthMode] = useState<'login' | 'signup'>('signup')
+  const [authEmail, setAuthEmail] = useState('')
+  const [authPassword, setAuthPassword] = useState('')
+  const [authName, setAuthName] = useState('')
+  const [authShopName, setAuthShopName] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+  const [notice, setNotice] = useState('')
+  const [shop, setShop] = useState<Shop | null>(null)
+  const [shopNameInput, setShopNameInput] = useState('')
+  const [shopPhoneInput, setShopPhoneInput] = useState('')
+  const [shopSlugInput, setShopSlugInput] = useState('')
+  const [barbers, setBarbers] = useState<Barber[]>([])
+  const [services, setServices] = useState<Service[]>([])
+  const [appointments, setAppointments] = useState<Appointment[]>([])
+  const [tab, setTab] = useState<Tab>('overview')
+  const [publicShop, setPublicShop] = useState<PublicShop | null>(null)
+  const [publicService, setPublicService] = useState('')
+  const [publicBarber, setPublicBarber] = useState('')
+  const [publicDate, setPublicDate] = useState(today())
+  const [publicTime, setPublicTime] = useState('')
+  const [publicName, setPublicName] = useState('')
+  const [publicPhone, setPublicPhone] = useState('')
+  const [publicNotes, setPublicNotes] = useState('')
+  const [publicSuccess, setPublicSuccess] = useState<any>(null)
+  const [newBarberName, setNewBarberName] = useState('')
+  const [newServiceName, setNewServiceName] = useState('')
+  const [newServicePrice, setNewServicePrice] = useState('35')
+  const [newServiceDuration, setNewServiceDuration] = useState('30')
+  const [appointmentDate, setAppointmentDate] = useState(today())
+  const [mobileNav, setMobileNav] = useState(false)
 
   useEffect(() => {
-    if (!isSupabaseConfigured) {
-      setBackendStatus('missing')
+    if (publicSlug) {
+      void loadPublicShop(publicSlug)
       return
     }
-    supabase.auth.getSession()
-      .then(({ error }) => setBackendStatus(error ? 'error' : 'ready'))
-      .catch(() => setBackendStatus('error'))
-  }, [])
+    supabase.auth.getSession().then(({ data }) => {
+      setSession(data.session)
+      setAuthReady(true)
+    }).catch(() => setAuthReady(true))
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      setSession(nextSession)
+      setAuthReady(true)
+    })
+    return () => listener.subscription.unsubscribe()
+  }, [publicSlug])
 
-  const startTrial = (plan = 'Profissional') => {
-    setSelectedPlan(plan)
-    setNoticeOpen(true)
+  const loadPublicShop = async (slug: string) => {
+    setBusy(true)
+    setError('')
+    const { data, error: queryError } = await supabase.rpc('get_public_shop', { p_slug: slug })
+    if (queryError) setError('Não foi possível carregar a agenda. Confirme se a migração SQL de agendamento público já foi executada.')
+    else if (!data) setError('Esta barbearia não foi encontrada ou está temporariamente indisponível.')
+    else {
+      setPublicShop(data as PublicShop)
+      if (data.services?.length) setPublicService(data.services[0].id)
+      if (data.barbers?.length) setPublicBarber(data.barbers[0].id)
+    }
+    setBusy(false)
   }
 
-  return (
-    <>
-      <header className="site-header">
-        <div className="container nav-container">
-          <a href="#inicio" className="brand" aria-label="AgendaKopcode início"><span className="brand-mark"><Scissors size={20} /></span><span>agenda<span className="brand-accent">kopcode</span></span></a>
-          <button className="mobile-menu-button" onClick={() => setMenuOpen(!menuOpen)} aria-label={menuOpen ? 'Fechar menu' : 'Abrir menu'}>{menuOpen ? <X /> : <Menu />}</button>
-          <nav className={menuOpen ? 'main-nav open' : 'main-nav'}>
-            <a href="#recursos" onClick={() => setMenuOpen(false)}>Recursos</a>
-            <a href="#como-funciona" onClick={() => setMenuOpen(false)}>Como funciona</a>
-            <a href="#planos" onClick={() => setMenuOpen(false)}>Planos</a>
-            <a href="#duvidas" onClick={() => setMenuOpen(false)}>Dúvidas</a>
-            <button className="nav-cta" onClick={() => startTrial()}>Começar grátis <ArrowRight size={16} /></button>
-          </nav>
-        </div>
-      </header>
+  const loadDashboard = useCallback(async (userId: string) => {
+    setBusy(true)
+    setError('')
+    const { data: owned, error: ownedError } = await supabase
+      .from('barbershops').select('id,name,slug,phone,timezone').eq('owner_id', userId).limit(1).maybeSingle()
+    if (ownedError) {
+      setError(ownedError.message)
+      setBusy(false)
+      return
+    }
+    if (!owned) {
+      setShop(null)
+      setBusy(false)
+      return
+    }
+    setShop(owned as Shop)
+    setShopNameInput(owned.name)
+    setShopPhoneInput(owned.phone || '')
+    setShopSlugInput(owned.slug)
+    const [b, s, a] = await Promise.all([
+      supabase.from('barbers').select('id,name,active').eq('barbershop_id', owned.id).order('name'),
+      supabase.from('services').select('id,name,description,price,duration_minutes,active').eq('barbershop_id', owned.id).order('name'),
+      supabase.from('appointments').select('id,client_name,client_phone,starts_at,ends_at,status,barber_id,service_id,notes').eq('barbershop_id', owned.id).order('starts_at', { ascending: true }).limit(500),
+    ])
+    if (b.error || s.error || a.error) setError(b.error?.message || s.error?.message || a.error?.message || 'Não foi possível carregar os dados.')
+    setBarbers((b.data || []) as Barber[])
+    setServices((s.data || []) as Service[])
+    setAppointments((a.data || []) as Appointment[])
+    setBusy(false)
+  }, [])
 
-      <main>
-        <section className="hero section" id="inicio">
-          <div className="hero-orb orb-one" /><div className="hero-orb orb-two" />
-          <div className="container hero-grid">
-            <div className="hero-copy">
-              <div className="announcement"><span><Sparkles size={13} /></span> SUA BARBEARIA, MAIS PROFISSIONAL <ArrowRight size={13} /></div>
-              <h1>Sua agenda em dia.<br /><span>Sua barbearia</span><br />em outro nível.</h1>
-              <p className="hero-description">Agendamentos, clientes e gestão em um só lugar. Menos tempo organizando a rotina, mais tempo fazendo o que você faz de melhor.</p>
-              <div className="hero-actions"><button className="button-primary button-large" onClick={() => startTrial()}>Quero conhecer grátis <ArrowRight size={18} /></button><a className="button-text" href="#recursos">Conhecer recursos <ArrowDownRight size={17} /></a></div>
-              <div className="hero-proof"><div className="proof-icons"><span><Scissors size={14} /></span><span><CalendarDays size={14} /></span><span><Zap size={14} /></span></div><p><strong>Feito para a rotina real</strong><br />de barbeiros e equipes.</p></div>
-              <div className="hero-trial"><Check size={15} /> 7 dias para conhecer <span /> Sem compromisso durante o teste</div>
-            </div>
-            <div className="hero-visual"><DashboardPreview /></div>
-          </div>
-          <div className="container hero-bottom"><span>UMA ROTINA MAIS LEVE COMEÇA COM</span><div><span><CalendarDays size={15} /> Agenda organizada</span><span><Bell size={15} /> Lembretes</span><span><TrendingUp size={15} /> Visão do negócio</span><span><ShieldCheck size={15} /> Dados separados por empresa</span></div></div>
-        </section>
+  useEffect(() => {
+    if (session?.user?.id && !publicSlug) void loadDashboard(session.user.id)
+  }, [session?.user?.id, publicSlug, loadDashboard])
 
-        <section className="benefits section" id="recursos">
-          <div className="container">
-            <div className="section-heading"><span className="eyebrow">MENOS CORRERIA. MAIS CONTROLE.</span><h2>O seu dia flui melhor<br />quando tudo está <span>no lugar.</span></h2><p>Ferramentas pensadas para quem atende sozinho e para quem coordena uma equipe inteira.</p></div>
-            <div className="feature-grid">
-              <article className="feature-card feature-dark"><div className="feature-icon"><CalendarDays /></div><span className="feature-number">01 / AGENDA</span><h3>Horários organizados, sem confusão.</h3><p>Visualize os atendimentos do dia e dê aos clientes um caminho simples para escolher um horário.</p><div className="mini-calendar"><div className="mini-cal-head"><span>Agenda de hoje</span><span>•••</span></div><div className="mini-cal-row"><span>09:00</span><i className="cal-bar bar-gold" /><small>Corte</small></div><div className="mini-cal-row"><span>09:30</span><i className="cal-bar bar-green" /><small>Corte + barba</small></div><div className="mini-cal-row"><span>10:15</span><i className="cal-bar bar-lilac" /><small>Barba</small></div></div></article>
-              <article className="feature-card"><div className="feature-icon icon-sand"><Users /></div><span className="feature-number">02 / CLIENTES</span><h3>Conheça quem senta na sua cadeira.</h3><p>Tenha os dados dos clientes e o histórico da sua relação com a barbearia em um só lugar.</p><div className="client-preview"><div className="client-row"><span className="client-avatar avatar-one">RM</span><div><strong>Rafael Martins</strong><small>Cliente recorrente</small></div><span className="client-check"><Check size={13} /></span></div><div className="client-row"><span className="client-avatar avatar-two">LC</span><div><strong>Lucas Costa</strong><small>Cliente recorrente</small></div><span className="client-check"><Check size={13} /></span></div></div></article>
-              <article className="feature-card"><div className="feature-icon icon-sage"><TrendingUp /></div><span className="feature-number">03 / GESTÃO</span><h3>Enxergue o negócio além da cadeira.</h3><p>Acompanhe os números da operação e tome decisões com mais clareza, sem depender de anotações soltas.</p><div className="revenue-preview"><span>Visão financeira</span><strong>Organização que acompanha seu crescimento</strong><div className="revenue-bars"><i /><i /><i /><i /><i /><i /><i /><i /><i /><i /><i /><i /></div><small><TrendingUp size={13} /> Indicadores no seu painel</small></div></article>
-            </div>
-          </div>
-        </section>
+  const refreshDashboard = async () => {
+    if (session?.user?.id) await loadDashboard(session.user.id)
+  }
 
-        <section className="how section" id="como-funciona">
-          <div className="container how-grid"><div className="section-heading how-heading"><span className="eyebrow">COMECE SEM COMPLICAÇÃO</span><h2>Do primeiro acesso<br />à sua rotina <span>organizada.</span></h2><p>Um espaço feito para acompanhar o seu negócio, seja você um profissional independente ou dono de uma barbearia com equipe.</p><button className="button-primary" onClick={() => startTrial()}>Ver opções de plano <ArrowRight size={17} /></button></div>
-            <div className="steps"><article className="step"><div className="step-number">01</div><div><h3>Configure seu espaço</h3><p>Cadastre sua barbearia, seus serviços, horários e profissionais.</p></div><span className="step-icon"><Scissors size={20} /></span></article><article className="step"><div className="step-number">02</div><div><h3>Compartilhe seu link</h3><p>Tenha um endereço de agendamento para enviar aos clientes e colocar na bio das redes sociais.</p></div><span className="step-icon"><ArrowRight size={20} /></span></article><article className="step"><div className="step-number">03</div><div><h3>Acompanhe tudo em um lugar</h3><p>Consulte a agenda, organize a equipe e acompanhe a operação pelo painel.</p></div><span className="step-icon"><TrendingUp size={20} /></span></article></div>
-          </div>
-        </section>
+  const doAuth = async (event: React.FormEvent) => {
+    event.preventDefault()
+    setBusy(true); setError(''); setNotice('')
+    try {
+      if (authMode === 'signup') {
+        if (authPassword.length < 8) throw new Error('Use uma senha com pelo menos 8 caracteres.')
+        if (authShopName.trim().length < 2) throw new Error('Informe o nome da barbearia.')
+        const { data, error: authError } = await supabase.auth.signUp({
+          email: authEmail.trim(), password: authPassword,
+          options: { data: { full_name: authName.trim(), shop_name: authShopName.trim() } },
+        })
+        if (authError) throw authError
+        if (data.session && data.user) {
+          const { error: shopError } = await supabase.from('barbershops').insert({
+            owner_id: data.user.id, name: authShopName.trim(), slug: slugify(authShopName) + '-' + data.user.id.slice(0, 5),
+          })
+          if (shopError) throw shopError
+          setNotice('Conta criada! Sua barbearia está pronta para configurar.')
+        } else {
+          setNotice('Conta criada. Confira seu e-mail para confirmar o cadastro; depois entre com sua senha. Se a confirmação estiver desativada no Supabase, você entrará automaticamente.')
+        }
+      } else {
+        const { error: authError } = await supabase.auth.signInWithPassword({ email: authEmail.trim(), password: authPassword })
+        if (authError) throw authError
+        setNotice('Login realizado.')
+      }
+    } catch (e) { setError(messageOf(e)) }
+    finally { setBusy(false) }
+  }
 
-        <section className="plans section" id="planos">
-          <div className="container"><div className="section-heading centered"><span className="eyebrow">ESCOLHA O SEU RITMO</span><h2>Um plano para cada<br /><span>fase da barbearia.</span></h2><p>Comece com o essencial e evolua conforme o seu negócio cresce.</p><div className="trial-label"><Sparkles size={15} /> 7 dias de teste para conhecer a plataforma</div></div>
-            <div className="plans-grid">{plans.map((plan) => <article className={plan.featured ? 'plan-card plan-featured' : 'plan-card'} key={plan.name}>{plan.featured && <div className="popular-label">MAIS ESCOLHIDO</div>}<div className="plan-top"><span>{plan.name}</span>{plan.featured && <Zap size={17} />}</div><p className="plan-note">{plan.note}</p><div className="plan-price"><small>R$</small><strong>{plan.price}</strong><span>/ mês</span></div><p className="plan-billing">Valores de referência para o lançamento</p><button className={plan.featured ? 'button-primary plan-button' : 'button-outline plan-button'} onClick={() => startTrial(plan.name)}>Conhecer este plano <ArrowRight size={16} /></button><div className="plan-divider" /><span className="includes-label">O QUE ESTÁ INCLUÍDO</span><ul>{plan.features.map((feature) => <li key={feature}><Check size={15} />{feature}</li>)}</ul></article>)}</div>
-            <p className="plans-disclaimer">Planos e preços apresentados como proposta inicial; a contratação e a cobrança ainda não estão ativadas neste protótipo.</p>
-          </div>
-        </section>
+  const createShop = async (event: React.FormEvent) => {
+    event.preventDefault()
+    if (!session?.user?.id) return
+    setBusy(true); setError('')
+    const slug = slugify(shopSlugInput || shopNameInput)
+    if (!slug) { setError('Informe um endereço válido para a barbearia.'); setBusy(false); return }
+    const { error: createError } = await supabase.from('barbershops').insert({
+      owner_id: session.user.id, name: shopNameInput.trim(), slug,
+      phone: shopPhoneInput.trim() || null, timezone: 'America/Sao_Paulo',
+    })
+    if (createError) setError(createError.code === '23505' ? 'Esse endereço já está sendo usado. Tente acrescentar seu bairro ou cidade.' : createError.message)
+    else { setNotice('Barbearia criada com sucesso!'); await refreshDashboard() }
+    setBusy(false)
+  }
 
-        <section className="security section"><div className="container security-card"><div className="security-icon"><ShieldCheck size={27} /></div><div><span className="eyebrow">PRIVACIDADE DESDE A BASE</span><h2>Os dados de cada barbearia<br />pertencem a ela.</h2><p>A plataforma está sendo planejada com separação de dados por empresa e regras de acesso. A proteção final depende da implementação e dos testes de segurança antes do lançamento.</p></div><div className="security-points"><span><CheckCircle2 size={16} /> Acesso por permissões</span><span><CheckCircle2 size={16} /> Espaços independentes</span><span><CheckCircle2 size={16} /> Segurança como prioridade</span></div></div></section>
+  const saveShop = async (event: React.FormEvent) => {
+    event.preventDefault()
+    if (!shop) return
+    setBusy(true); setError('')
+    const { error: saveError } = await supabase.from('barbershops').update({
+      name: shopNameInput.trim(), slug: slugify(shopSlugInput), phone: shopPhoneInput.trim() || null,
+    }).eq('id', shop.id)
+    if (saveError) setError(saveError.code === '23505' ? 'Esse link já está sendo usado por outra barbearia.' : saveError.message)
+    else { setNotice('Configurações salvas.'); await refreshDashboard() }
+    setBusy(false)
+  }
 
-        <section className="faq section" id="duvidas"><div className="container faq-grid"><div className="section-heading"><span className="eyebrow">DÚVIDAS FREQUENTES</span><h2>Quer saber mais<br />antes de <span>começar?</span></h2><p>Estamos construindo uma forma mais simples de cuidar da rotina da sua barbearia.</p></div><div className="faq-list">{[{q:'Serve para barbeiro autônomo?',a:'Sim. A proposta é atender tanto profissionais independentes quanto barbearias que trabalham com equipes.'},{q:'Posso ter um link para meus clientes?',a:'Sim. A experiência planejada inclui um endereço próprio para cada barbearia, fácil de compartilhar nas redes sociais.'},{q:'Como funciona o teste de 7 dias?',a:'A proposta é permitir que você conheça a plataforma por 7 dias. O cadastro e a ativação do teste ainda serão implementados.'},{q:'Já posso pagar pelo site?',a:'Ainda não. Esta é a primeira versão visual do projeto. Cadastro, pagamentos recorrentes e notificações serão conectados nas próximas etapas.'}].map((item, index) => <div className={faqOpen === index ? 'faq-item faq-item-open' : 'faq-item'} key={item.q}><button onClick={() => setFaqOpen(faqOpen === index ? null : index)} aria-expanded={faqOpen === index}><span>{item.q}</span><span className="faq-toggle">{faqOpen === index ? <X size={16} /> : <ArrowRight size={16} />}</span></button>{faqOpen === index && <p>{item.a}</p>}</div>)}</div></div></section>
+  const addBarber = async (event: React.FormEvent) => {
+    event.preventDefault()
+    if (!shop || !newBarberName.trim()) return
+    setBusy(true); setError('')
+    const { error: e } = await supabase.from('barbers').insert({ barbershop_id: shop.id, name: newBarberName.trim(), active: true })
+    if (e) setError(e.message)
+    else { setNewBarberName(''); setNotice('Profissional cadastrado.'); await refreshDashboard() }
+    setBusy(false)
+  }
 
-        <section className="final-cta"><div className="container final-cta-inner"><div><span className="eyebrow">AGENDAKOPCODE</span><h2>Seu talento merece<br />uma rotina à altura.</h2><p>Conheça a proposta e acompanhe a evolução da plataforma.</p></div><button className="button-light" onClick={() => startTrial()}>Quero conhecer <ArrowRight size={18} /></button><div className="cta-sparkle"><Sparkles size={120} /></div></div></section>
-      </main>
+  const addService = async (event: React.FormEvent) => {
+    event.preventDefault()
+    if (!shop || !newServiceName.trim()) return
+    setBusy(true); setError('')
+    const { error: e } = await supabase.from('services').insert({
+      barbershop_id: shop.id, name: newServiceName.trim(),
+      price: Number(newServicePrice), duration_minutes: Number(newServiceDuration), active: true,
+    })
+    if (e) setError(e.message)
+    else { setNewServiceName(''); setNotice('Serviço cadastrado.'); await refreshDashboard() }
+    setBusy(false)
+  }
 
-      <footer className="site-footer"><div className="container footer-inner"><a href="#inicio" className="brand"><span className="brand-mark"><Scissors size={18} /></span><span>agenda<span className="brand-accent">kopcode</span></span></a><p>Organização para quem vive da barbearia.</p><div className="footer-links"><a href="#recursos">Recursos</a><a href="#planos">Planos</a><a href="#duvidas">Dúvidas</a></div><span className="copyright">© {new Date().getFullYear()} AgendaKopcode</span></div></footer>
+  const toggleActive = async (table: 'barbers' | 'services', item: Barber | Service) => {
+    const { error: e } = await supabase.from(table).update({ active: !item.active }).eq('id', item.id).eq('barbershop_id', shop?.id)
+    if (e) setError(e.message)
+    else await refreshDashboard()
+  }
 
-      {noticeOpen && <div className="modal-backdrop" role="presentation" onClick={() => setNoticeOpen(false)}><div className="notice-modal" role="dialog" aria-modal="true" aria-labelledby="notice-title" onClick={(event) => event.stopPropagation()}><button className="modal-close" onClick={() => setNoticeOpen(false)} aria-label="Fechar"><X size={19} /></button><div className="modal-symbol"><Sparkles size={24} /></div><span className="eyebrow">PRÓXIMA ETAPA</span><h2 id="notice-title">O AgendaKopcode está tomando forma.</h2><p>Você selecionou o plano <strong>{selectedPlan}</strong>. {backendStatus === 'ready' ? 'A configuração do cliente Supabase está carregada no site.' : backendStatus === 'checking' ? 'Verificando a configuração do banco de dados…' : backendStatus === 'missing' ? 'O Supabase ainda precisa ser configurado nas variáveis de ambiente do site.' : 'Não foi possível confirmar a conexão com o Supabase; confira as variáveis de ambiente e a configuração do projeto.'} O cadastro, o teste grátis e os pagamentos ainda serão ativados nas próximas etapas.</p><button className="button-primary modal-action" onClick={() => { setNoticeOpen(false); document.getElementById('planos')?.scrollIntoView({ behavior: 'smooth' }) }}>Continuar explorando <ArrowRight size={16} /></button></div></div>}
-    </>
-  )
+  const updateAppointmentStatus = async (appointment: Appointment, status: Appointment['status']) => {
+    setError('')
+    const { error: e } = await supabase.from('appointments').update({ status }).eq('id', appointment.id).eq('barbershop_id', shop?.id)
+    if (e) setError(e.message)
+    else { setNotice('Status do atendimento atualizado.'); await refreshDashboard() }
+  }
+
+  const copyLink = async () => {
+    if (!shop) return
+    const link = window.location.origin + '/b/' + shop.slug
+    try { await navigator.clipboard.writeText(link); setNotice('Link copiado! Envie aos seus clientes.') }
+    catch { setNotice('Copie o link: ' + link) }
+  }
+
+  const shopAppointments = useMemo(() => appointments.filter(a => localDate(new Date(a.starts_at)) === appointmentDate), [appointments, appointmentDate])
+  const todayAppointments = useMemo(() => appointments.filter(a => localDate(new Date(a.starts_at)) === today() && a.status !== 'cancelled'), [appointments])
+  const revenue = appointments.filter(a => a.status === 'completed').reduce((sum, a) => sum + Number(services.find(s => s.id === a.service_id)?.price || 0), 0)
+  const selectedPublicService = publicShop?.services.find(s => s.id === publicService)
+  const publicSlots = useMemo(() => {
+    if (!publicShop || !publicDate || !selectedPublicService || !publicBarber) return []
+    const slots: string[] = []
+    const now = Date.now()
+    for (let minutes = 8 * 60; minutes <= 20 * 60; minutes += 30) {
+      const hh = String(Math.floor(minutes / 60)).padStart(2, '0')
+      const mm = String(minutes % 60).padStart(2, '0')
+      const start = new Date(publicDate + 'T' + hh + ':' + mm + ':00-03:00')
+      const end = new Date(start.getTime() + selectedPublicService.duration_minutes * 60000)
+      const endLocalMinutes = end.getUTCHours() * 60 + end.getUTCMinutes() + 180
+      const endsWithinHours = endLocalMinutes <= 21 * 60
+      if (start.getTime() <= now || !endsWithinHours) continue
+      slots.push(hh + ':' + mm)
+    }
+    return slots
+  }, [publicShop, publicDate, selectedPublicService, publicBarber])
+
+  const [busySlots, setBusySlots] = useState<{ starts_at: string; ends_at: string }[]>([])
+  useEffect(() => {
+    if (!publicShop || !publicDate || !publicBarber) { setBusySlots([]); return }
+    let alive = true
+    supabase.rpc('get_public_busy_slots', { p_slug: publicShop.slug, p_date: publicDate, p_barber_id: publicBarber })
+      .then(({ data, error: e }) => {
+        if (!alive) return
+        if (e) setError('Não foi possível consultar os horários ocupados. Execute a migração SQL de agendamento público.')
+        else setBusySlots((data || []) as { starts_at: string; ends_at: string }[])
+      })
+    return () => { alive = false }
+  }, [publicShop, publicDate, publicBarber])
+
+  const availableSlots = publicSlots.filter(slot => {
+    if (!selectedPublicService) return false
+    const start = new Date(publicDate + 'T' + slot + ':00-03:00').getTime()
+    const end = start + selectedPublicService.duration_minutes * 60000
+    return !busySlots.some(item => start < new Date(item.ends_at).getTime() && end > new Date(item.starts_at).getTime())
+  })
+
+  const bookPublic = async (event: React.FormEvent) => {
+    event.preventDefault()
+    if (!publicShop || !selectedPublicService || !publicBarber || !publicTime) return
+    setBusy(true); setError('')
+    const startAt = new Date(publicDate + 'T' + publicTime + ':00-03:00').toISOString()
+    const { data, error: e } = await supabase.rpc('create_public_appointment', {
+      p_slug: publicShop.slug, p_barber_id: publicBarber, p_service_id: selectedPublicService.id,
+      p_starts_at: startAt, p_client_name: publicName.trim(), p_client_phone: publicPhone.trim(), p_notes: publicNotes.trim() || null,
+    })
+    if (e) setError(e.message)
+    else { setPublicSuccess(data); setPublicTime('') }
+    setBusy(false)
+  }
+
+  if (publicSlug) {
+    if (busy && !publicShop && !error) return <LoadingScreen />
+    if (publicSuccess) return <main className="booking-page"><section className="booking-card booking-success"><div className="success-icon"><CheckCircle2 size={36} /></div><span className="eyebrow">HORÁRIO RESERVADO</span><h1>Agendamento confirmado!</h1><p>Seu horário na <strong>{publicSuccess.shop_name}</strong> foi registrado.</p><div className="booking-summary"><span><CalendarDays size={17} /> {formatDate(publicSuccess.starts_at)}</span><span><Clock3 size={17} /> {formatTime(publicSuccess.starts_at)}</span></div><p className="muted">Guarde as informações do seu horário. Em caso de necessidade, entre em contato diretamente com a barbearia.</p><a className="btn btn-primary btn-full" href="/">Conhecer AgendaKopcode <ArrowRight size={16} /></a></section></main>
+    return <main className="booking-page"><div className="booking-shell"><div className="booking-brand"><Brand /><span>AGENDAMENTO ONLINE</span></div>{publicShop ? <><header className="booking-heading"><div className="shop-avatar large">{publicShop.name.slice(0, 1).toUpperCase()}</div><span className="eyebrow">AGENDA ONLINE</span><h1>{publicShop.name}</h1><p>Escolha o serviço, o profissional e o melhor horário para você.</p></header>{error && <div className="alert alert-error">{error}</div>}{publicShop.services.length === 0 || publicShop.barbers.length === 0 ? <div className="empty-state"><Scissors size={28} /><h3>Agenda sendo preparada</h3><p>Esta barbearia ainda não cadastrou profissionais e serviços disponíveis.</p></div> : <form className="booking-card" onSubmit={bookPublic}><label>1. Escolha o serviço<select required value={publicService} onChange={e => { setPublicService(e.target.value); setPublicTime('') }}><option value="">Selecione</option>{publicShop.services.map(s => <option key={s.id} value={s.id}>{s.name} · {money(s.price)} · {s.duration_minutes} min</option>)}</select></label><label>2. Escolha o profissional<select required value={publicBarber} onChange={e => { setPublicBarber(e.target.value); setPublicTime('') }}><option value="">Selecione</option>{publicShop.barbers.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}</select></label><label>3. Escolha o dia<input required type="date" min={today()} value={publicDate} onChange={e => { setPublicDate(e.target.value); setPublicTime('') }} /></label><div className="slot-section"><div className="label-row"><span>4. Horários disponíveis</span><small>{availableSlots.length} opções</small></div>{availableSlots.length ? <div className="slots-grid">{availableSlots.map(slot => <button type="button" key={slot} className={publicTime === slot ? 'slot selected' : 'slot'} onClick={() => setPublicTime(slot)}>{slot}</button>)}</div> : <p className="muted slot-empty">Nenhum horário disponível para esta seleção. Tente outro dia ou profissional.</p>}</div><div className="form-divider" /><label>Seu nome<input required minLength={2} value={publicName} onChange={e => setPublicName(e.target.value)} placeholder="Nome completo" /></label><label>WhatsApp<input required value={publicPhone} onChange={e => setPublicPhone(e.target.value)} placeholder="(00) 00000-0000" /></label><label>Observação (opcional)<textarea value={publicNotes} onChange={e => setPublicNotes(e.target.value)} placeholder="Algum detalhe para o profissional?" rows={2} /></label>{selectedPublicService && <div className="booking-total"><span>{selectedPublicService.name}<small>{selectedPublicService.duration_minutes} minutos</small></span><strong>{money(selectedPublicService.price)}</strong></div>}<button className="btn btn-primary btn-full" disabled={busy || !publicTime} type="submit">{busy ? <LoaderCircle className="spin" size={18} /> : <CalendarCheck size={18} />} Confirmar agendamento</button><p className="form-footnote"><ShieldCheck size={14} /> Seus dados são enviados somente para esta barbearia.</p></form>}</> : !busy && <div className="booking-card"><h2>Barbearia não encontrada</h2><p>Confira se o link está correto ou entre em contato com o estabelecimento.</p></div>}<footer className="booking-footer">Agendamento online com <strong>AgendaKopcode</strong></footer></div></main>
+  }
+
+  if (!authReady) return <LoadingScreen />
+
+  if (!session) return <main className="auth-page"><div className="auth-decoration auth-decoration-one" /><div className="auth-decoration auth-decoration-two" /><div className="auth-layout"><section className="auth-intro"><Brand /><span className="eyebrow">GESTÃO FEITA PARA BARBEARIAS</span><h1>Sua agenda em dia.<br /><span>Sua barbearia em outro nível.</span></h1><p>Organize horários, profissionais, serviços e clientes em um único espaço, com um link de agendamento para compartilhar.</p><div className="auth-benefits"><span><CalendarDays /> Agenda online para seus clientes</span><span><Users /> Gestão de profissionais e serviços</span><span><ShieldCheck /> Dados separados por barbearia</span></div><small>Sem integração de pagamento nesta versão. Comece a organizar sua rotina.</small></section><section className="auth-panel"><div className="auth-panel-top"><span className="eyebrow">{authMode === 'signup' ? 'COMECE AGORA' : 'BEM-VINDO DE VOLTA'}</span><h2>{authMode === 'signup' ? 'Crie seu espaço.' : 'Entre na sua conta.'}</h2><p>{authMode === 'signup' ? 'Configure sua barbearia em poucos passos.' : 'Acesse o painel da sua barbearia.'}</p></div>{error && <div className="alert alert-error">{error}</div>}{notice && <div className="alert alert-success">{notice}</div>}<form onSubmit={doAuth} className="form-stack">{authMode === 'signup' && <><label>Seu nome<input required value={authName} onChange={e => setAuthName(e.target.value)} placeholder="Como podemos chamar você?" /></label><label>Nome da barbearia<input required value={authShopName} onChange={e => setAuthShopName(e.target.value)} placeholder="Ex.: Barbearia Central" /></label></>}<label>E-mail<input type="email" required autoComplete="email" value={authEmail} onChange={e => setAuthEmail(e.target.value)} placeholder="voce@email.com" /></label><label>Senha<input type="password" required minLength={8} autoComplete={authMode === 'signup' ? 'new-password' : 'current-password'} value={authPassword} onChange={e => setAuthPassword(e.target.value)} placeholder="Mínimo de 8 caracteres" /></label><button className="btn btn-primary btn-full" disabled={busy} type="submit">{busy ? <LoaderCircle className="spin" size={18} /> : authMode === 'signup' ? <Sparkles size={18} /> : <ArrowRight size={18} />}{authMode === 'signup' ? 'Criar conta grátis' : 'Entrar no painel'}</button></form><p className="auth-switch">{authMode === 'signup' ? 'Já tem uma conta?' : 'Ainda não tem conta?'} <button onClick={() => { setAuthMode(authMode === 'signup' ? 'login' : 'signup'); setError(''); setNotice('') }}>{authMode === 'signup' ? 'Fazer login' : 'Criar conta'}</button></p><div className="auth-trial"><CheckCircle2 size={16} /> Cadastro gratuito. Pagamentos não ativados.</div></section></div><footer className="auth-footer">© {new Date().getFullYear()} AgendaKopcode · Organização para quem vive da barbearia.</footer></main>
+
+  if (busy && !shop && !error) return <LoadingScreen />
+
+  if (!shop) return <main className="auth-page"><div className="shop-setup-card"><Brand /><span className="eyebrow">QUASE PRONTO</span><h1>Configure sua barbearia</h1><p>Defina o nome e o link que seus clientes usarão para agendar.</p>{error && <div className="alert alert-error">{error}</div>}{notice && <div className="alert alert-success">{notice}</div>}<form onSubmit={createShop} className="form-stack"><label>Nome da barbearia<input required value={shopNameInput || authShopName} onChange={e => setShopNameInput(e.target.value)} placeholder="Ex.: Barbearia Central" /></label><label>Link personalizado<input required value={shopSlugInput} onChange={e => setShopSlugInput(slugify(e.target.value))} placeholder="barbearia-central" /><small>Seu link será {window.location.origin}/b/{slugify(shopSlugInput || shopNameInput) || 'seu-link'}</small></label><label>WhatsApp da barbearia<input value={shopPhoneInput} onChange={e => setShopPhoneInput(e.target.value)} placeholder="(00) 00000-0000" /></label><button className="btn btn-primary btn-full" disabled={busy} type="submit">{busy ? <LoaderCircle className="spin" /> : <Store size={18} />} Criar minha barbearia</button></form><button className="link-button" onClick={() => supabase.auth.signOut()}><LogOut size={15} /> Sair da conta</button></div></main>
+
+  const navItems: { id: Tab; label: string; icon: typeof LayoutDashboard }[] = [
+    { id: 'overview', label: 'Visão geral', icon: LayoutDashboard },
+    { id: 'appointments', label: 'Agendamentos', icon: CalendarDays },
+    { id: 'barbers', label: 'Profissionais', icon: Users },
+    { id: 'services', label: 'Serviços', icon: Scissors },
+    { id: 'settings', label: 'Minha barbearia', icon: Settings },
+  ]
+
+  return <main className="app-shell"><aside className={mobileNav ? 'sidebar sidebar-open' : 'sidebar'}><div className="sidebar-brand"><Brand /><button className="icon-button sidebar-close" onClick={() => setMobileNav(false)}><X size={18} /></button></div><div className="sidebar-shop"><div className="shop-avatar">{shop.name.slice(0, 1).toUpperCase()}</div><div><strong>{shop.name}</strong><small>Plano gratuito</small></div></div><nav className="side-nav">{navItems.map(item => <button key={item.id} className={tab === item.id ? 'side-link active' : 'side-link'} onClick={() => { setTab(item.id); setMobileNav(false) }}><item.icon size={18} />{item.label}</button>)}</nav><div className="sidebar-bottom"><div className="privacy-note"><ShieldCheck size={17} /><span>Seus dados são separados por barbearia.</span></div><button className="side-link" onClick={() => supabase.auth.signOut()}><LogOut size={18} /> Sair da conta</button></div></aside><div className="dashboard-area"><header className="dashboard-header"><button className="icon-button mobile-nav-trigger" onClick={() => setMobileNav(true)}><Menu /></button><div><span className="eyebrow">PAINEL DA BARBEARIA</span><h1>{navItems.find(i => i.id === tab)?.label}</h1></div><div className="header-actions"><a className="btn btn-outline btn-sm" href={'/b/' + shop.slug} target="_blank" rel="noreferrer"><ExternalLink size={15} /> Ver agenda</a><button className="btn btn-primary btn-sm" onClick={copyLink}><Share2 size={15} /> Compartilhar link</button></div></header>{error && <div className="alert alert-error dashboard-alert">{error}</div>}{notice && <div className="alert alert-success dashboard-alert"><CheckCircle2 size={16} />{notice}<button onClick={() => setNotice('')}><X size={14} /></button></div>}
+    {tab === 'overview' && <section className="content-section"><div className="welcome-row"><div><h2>Olá, {session.user.user_metadata?.full_name || session.user.email?.split('@')[0]} 👋</h2><p>Veja como está a rotina da sua barbearia.</p></div><span className="date-chip"><CalendarDays size={16} /> {new Intl.DateTimeFormat('pt-BR', { dateStyle: 'full' }).format(new Date())}</span></div><div className="metric-grid"><article className="metric-card"><div><span>Atendimentos hoje</span><CalendarCheck size={18} /></div><strong>{todayAppointments.length}</strong><small>Agendamentos não cancelados</small></article><article className="metric-card"><div><span>Profissionais ativos</span><Users size={18} /></div><strong>{barbers.filter(b => b.active).length}</strong><small>Na sua equipe</small></article><article className="metric-card"><div><span>Serviços ativos</span><Scissors size={18} /></div><strong>{services.filter(s => s.active).length}</strong><small>Disponíveis para reserva</small></article><article className="metric-card"><div><span>Faturamento concluído</span><Wallet size={18} /></div><strong>{money(revenue)}</strong><small>Somente atendimentos concluídos</small></article></div><div className="content-grid"><section className="panel appointments-panel"><div className="panel-title"><div><h3>Próximos atendimentos</h3><p>Os próximos horários da agenda</p></div><button className="text-action" onClick={() => setTab('appointments')}>Ver agenda <ArrowRight size={15} /></button></div>{appointments.filter(a => a.status !== 'cancelled' && new Date(a.starts_at).getTime() >= Date.now()).slice(0, 5).map(a => <AppointmentRow key={a.id} a={a} barbers={barbers} services={services} onStatus={updateAppointmentStatus} />)}{appointments.filter(a => a.status !== 'cancelled' && new Date(a.starts_at).getTime() >= Date.now()).length === 0 && <div className="empty-state"><CalendarDays size={26} /><h3>Nenhum atendimento próximo</h3><p>Compartilhe seu link para começar a receber agendamentos.</p><button className="btn btn-outline" onClick={copyLink}><Copy size={15} /> Copiar link</button></div>}</section><section className="panel quick-panel"><div className="panel-title"><div><h3>Comece por aqui</h3><p>Deixe sua agenda pronta</p></div><Sparkles size={18} /></div><button className="quick-action" onClick={() => setTab('services')}><span><Scissors /></span><div><strong>Cadastre seus serviços</strong><small>Preço e duração de cada atendimento</small></div><ArrowRight /></button><button className="quick-action" onClick={() => setTab('barbers')}><span><Users /></span><div><strong>Adicione profissionais</strong><small>Organize sua equipe</small></div><ArrowRight /></button><button className="quick-action" onClick={copyLink}><span><LinkIcon /></span><div><strong>Compartilhe sua agenda</strong><small>Envie o link aos seus clientes</small></div><ArrowRight /></button><div className="share-box"><span>SEU LINK PÚBLICO</span><code>{window.location.host}/b/{shop.slug}</code><button className="btn btn-primary btn-full" onClick={copyLink}><Copy size={15} /> Copiar link de agendamento</button></div></section></div></section>}
+    {tab === 'appointments' && <section className="content-section"><div className="page-intro"><div><h2>Agenda de atendimentos</h2><p>Consulte e atualize o status dos agendamentos recebidos.</p></div><label className="date-filter">Filtrar dia<input type="date" value={appointmentDate} onChange={e => setAppointmentDate(e.target.value)} /></label></div><section className="panel"><div className="panel-title"><div><h3>{shopAppointments.length} atendimento(s)</h3><p>{formatDate(appointmentDate + 'T12:00:00-03:00')}</p></div><CalendarDays /></div>{shopAppointments.map(a => <AppointmentRow key={a.id} a={a} barbers={barbers} services={services} onStatus={updateAppointmentStatus} />)}{shopAppointments.length === 0 && <div className="empty-state"><CalendarDays size={28} /><h3>Dia sem agendamentos</h3><p>Os novos horários aparecerão aqui automaticamente.</p></div>}</section></section>}
+    {tab === 'barbers' && <section className="content-section"><div className="page-intro"><div><h2>Profissionais</h2><p>Cadastre a equipe que atenderá os clientes.</p></div></div><section className="panel"><h3>Adicionar profissional</h3><form className="inline-form" onSubmit={addBarber}><input required value={newBarberName} onChange={e => setNewBarberName(e.target.value)} placeholder="Nome do profissional" /><button className="btn btn-primary" disabled={busy}><Plus size={16} /> Adicionar</button></form><div className="manage-list">{barbers.map(b => <div className="manage-row" key={b.id}><span className="manage-avatar"><Scissors size={17} /></span><div className="manage-main"><strong>{b.name}</strong><small>{b.active ? 'Visível na agenda pública' : 'Inativo — não recebe reservas'}</small></div><button className={b.active ? 'btn btn-outline btn-sm' : 'btn btn-primary btn-sm'} onClick={() => toggleActive('barbers', b)}>{b.active ? 'Desativar' : 'Ativar'}</button></div>)}{barbers.length === 0 && <div className="empty-state"><Users size={28} /><p>Nenhum profissional cadastrado ainda.</p></div>}</div></section></section>}
+    {tab === 'services' && <section className="content-section"><div className="page-intro"><div><h2>Serviços e preços</h2><p>Defina o que seus clientes podem reservar.</p></div></div><section className="panel"><h3>Adicionar serviço</h3><form className="service-form" onSubmit={addService}><label>Nome do serviço<input required value={newServiceName} onChange={e => setNewServiceName(e.target.value)} placeholder="Ex.: Corte tradicional" /></label><label>Preço (R$)<input required type="number" min="0" step="0.01" value={newServicePrice} onChange={e => setNewServicePrice(e.target.value)} /></label><label>Duração<select value={newServiceDuration} onChange={e => setNewServiceDuration(e.target.value)}>{[10,15,20,30,40,45,60,75,90,120].map(n => <option key={n} value={n}>{n} minutos</option>)}</select></label><button className="btn btn-primary" disabled={busy}><Plus size={16} /> Cadastrar serviço</button></form><div className="manage-list">{services.map(s => <div className="manage-row" key={s.id}><span className="manage-avatar"><Scissors size={17} /></span><div className="manage-main"><strong>{s.name}</strong><small>{s.duration_minutes} minutos · {money(s.price)} · {s.active ? 'Ativo' : 'Inativo'}</small></div><button className={s.active ? 'btn btn-outline btn-sm' : 'btn btn-primary btn-sm'} onClick={() => toggleActive('services', s)}>{s.active ? 'Desativar' : 'Ativar'}</button></div>)}{services.length === 0 && <div className="empty-state"><Scissors size={28} /><p>Nenhum serviço cadastrado ainda.</p></div>}</div></section></section>}
+    {tab === 'settings' && <section className="content-section"><div className="page-intro"><div><h2>Minha barbearia</h2><p>Atualize os dados públicos do estabelecimento.</p></div></div><section className="panel settings-panel"><form className="form-stack" onSubmit={saveShop}><label>Nome da barbearia<input required value={shopNameInput} onChange={e => setShopNameInput(e.target.value)} /></label><label>Endereço do link<input required value={shopSlugInput} onChange={e => setShopSlugInput(slugify(e.target.value))} /><small>Link público: {window.location.origin}/b/{slugify(shopSlugInput)}</small></label><label>WhatsApp para contato<input value={shopPhoneInput} onChange={e => setShopPhoneInput(e.target.value)} placeholder="(00) 00000-0000" /></label><button className="btn btn-primary" disabled={busy}><Settings size={16} /> Salvar configurações</button></form><div className="settings-share"><h3>Link de agendamento</h3><p>Compartilhe nas redes sociais ou envie diretamente aos clientes.</p><code>{window.location.origin}/b/{shop.slug}</code><button className="btn btn-outline" onClick={copyLink}><Copy size={15} /> Copiar link</button></div></section><div className="privacy-banner"><ShieldCheck /><div><strong>Separação de dados</strong><p>O banco valida a associação dos profissionais, serviços e atendimentos à mesma barbearia.</p></div></div></section>}
+    <footer className="dashboard-footer">© {new Date().getFullYear()} AgendaKopcode <span>·</span> Sua agenda, seu negócio.</footer></div></main>
+}
+
+function AppointmentRow({ a, barbers, services, onStatus }: { a: Appointment; barbers: Barber[]; services: Service[]; onStatus: (a: Appointment, status: Appointment['status']) => void }) {
+  const barber = barbers.find(b => b.id === a.barber_id)
+  const service = services.find(s => s.id === a.service_id)
+  return <div className="appointment-row"><div className="appointment-time-box"><strong>{formatTime(a.starts_at)}</strong><small>{formatDate(a.starts_at)}</small></div><div className="appointment-client"><strong>{a.client_name}</strong><small>{service?.name || 'Serviço'} · {barber?.name || 'Profissional'}</small><a href={'https://wa.me/' + a.client_phone.replace(/\D/g, '')} target="_blank" rel="noreferrer">{a.client_phone}</a></div><span className={'status-pill status-' + a.status}>{({ pending: 'Pendente', confirmed: 'Confirmado', cancelled: 'Cancelado', completed: 'Concluído', no_show: 'Não compareceu' } as Record<string, string>)[a.status]}</span><select aria-label="Status do atendimento" value={a.status} onChange={e => onStatus(a, e.target.value as Appointment['status'])}><option value="pending">Pendente</option><option value="confirmed">Confirmado</option><option value="completed">Concluído</option><option value="no_show">Não compareceu</option><option value="cancelled">Cancelar</option></select></div>
+}
+
+function LoadingScreen() {
+  return <main className="loading-screen"><div className="loading-brand"><Brand /><LoaderCircle className="spin" size={25} /></div><p>Preparando seu espaço...</p></main>
 }
 
 export default App
