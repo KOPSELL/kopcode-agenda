@@ -150,6 +150,26 @@ function App() {
     if (session?.user?.id) await loadDashboard(session.user.id)
   }
 
+  // Atualiza o painel quando um agendamento é criado ou alterado no banco.
+  useEffect(() => {
+    if (!shop?.id || !session?.user?.id || publicSlug) return
+    const channel = supabase
+      .channel('agenda-appointments-' + shop.id)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'appointments',
+          filter: 'barbershop_id=eq.' + shop.id,
+        },
+        () => { void refreshDashboard() },
+      )
+      .subscribe()
+
+    return () => { void supabase.removeChannel(channel) }
+  }, [shop?.id, session?.user?.id, publicSlug, loadDashboard])
+
   const doAuth = async (event: FormEvent) => {
     event.preventDefault()
     setBusy(true); setError(''); setNotice('')
