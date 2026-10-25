@@ -157,6 +157,7 @@ function App() {
             owner_id: data.user.id, name: authShopName.trim(), slug: slugify(authShopName) + '-' + data.user.id.slice(0, 5),
           })
           if (shopError) throw shopError
+          await loadDashboard(data.user.id)
           setNotice('Conta criada! Sua barbearia está pronta para configurar.')
         } else {
           setNotice('Conta criada. Confira seu e-mail para confirmar o cadastro; depois entre com sua senha. Se a confirmação estiver desativada no Supabase, você entrará automaticamente.')
