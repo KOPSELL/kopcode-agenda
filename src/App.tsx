@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { isSupabaseConfigured, supabase } from './lib/supabase'
 import {
   ArrowDownRight, ArrowRight, Bell, CalendarDays, Check, CheckCircle2,
   ChevronDown, Clock3, Menu, Scissors, ShieldCheck,
@@ -53,6 +54,17 @@ function App() {
   const [faqOpen, setFaqOpen] = useState<number | null>(0)
   const [selectedPlan, setSelectedPlan] = useState('Profissional')
   const [noticeOpen, setNoticeOpen] = useState(false)
+  const [backendStatus, setBackendStatus] = useState<'checking' | 'ready' | 'missing' | 'error'>('checking')
+
+  useEffect(() => {
+    if (!isSupabaseConfigured) {
+      setBackendStatus('missing')
+      return
+    }
+    supabase.auth.getSession()
+      .then(({ error }) => setBackendStatus(error ? 'error' : 'ready'))
+      .catch(() => setBackendStatus('error'))
+  }, [])
 
   const startTrial = (plan = 'Profissional') => {
     setSelectedPlan(plan)
@@ -125,7 +137,7 @@ function App() {
 
       <footer className="site-footer"><div className="container footer-inner"><a href="#inicio" className="brand"><span className="brand-mark"><Scissors size={18} /></span><span>agenda<span className="brand-accent">kopcode</span></span></a><p>Organização para quem vive da barbearia.</p><div className="footer-links"><a href="#recursos">Recursos</a><a href="#planos">Planos</a><a href="#duvidas">Dúvidas</a></div><span className="copyright">© {new Date().getFullYear()} AgendaKopcode</span></div></footer>
 
-      {noticeOpen && <div className="modal-backdrop" role="presentation" onClick={() => setNoticeOpen(false)}><div className="notice-modal" role="dialog" aria-modal="true" aria-labelledby="notice-title" onClick={(event) => event.stopPropagation()}><button className="modal-close" onClick={() => setNoticeOpen(false)} aria-label="Fechar"><X size={19} /></button><div className="modal-symbol"><Sparkles size={24} /></div><span className="eyebrow">PRÓXIMA ETAPA</span><h2 id="notice-title">O AgendaKopcode está tomando forma.</h2><p>Você selecionou o plano <strong>{selectedPlan}</strong>. Esta versão já apresenta a experiência visual; cadastro, teste grátis e pagamentos serão ativados depois de configurar o ambiente e o banco de dados.</p><button className="button-primary modal-action" onClick={() => { setNoticeOpen(false); document.getElementById('planos')?.scrollIntoView({ behavior: 'smooth' }) }}>Continuar explorando <ArrowRight size={16} /></button></div></div>}
+      {noticeOpen && <div className="modal-backdrop" role="presentation" onClick={() => setNoticeOpen(false)}><div className="notice-modal" role="dialog" aria-modal="true" aria-labelledby="notice-title" onClick={(event) => event.stopPropagation()}><button className="modal-close" onClick={() => setNoticeOpen(false)} aria-label="Fechar"><X size={19} /></button><div className="modal-symbol"><Sparkles size={24} /></div><span className="eyebrow">PRÓXIMA ETAPA</span><h2 id="notice-title">O AgendaKopcode está tomando forma.</h2><p>Você selecionou o plano <strong>{selectedPlan}</strong>. {backendStatus === 'ready' ? 'A conexão com o serviço de autenticação Supabase respondeu corretamente.' : backendStatus === 'checking' ? 'Verificando a configuração do banco de dados…' : backendStatus === 'missing' ? 'O Supabase ainda precisa ser configurado nas variáveis de ambiente do site.' : 'Não foi possível confirmar a conexão com o Supabase; confira as variáveis de ambiente e a configuração do projeto.'} O cadastro, o teste grátis e os pagamentos ainda serão ativados nas próximas etapas.</p><button className="button-primary modal-action" onClick={() => { setNoticeOpen(false); document.getElementById('planos')?.scrollIntoView({ behavior: 'smooth' }) }}>Continuar explorando <ArrowRight size={16} /></button></div></div>}
     </>
   )
 }
