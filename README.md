@@ -32,6 +32,19 @@ Passos:
 3. Confirme que o projeto selecionado é `hfxakwkmitmjvmzzyytq`, depois clique em **Run**.
 4. Não execute em nenhum projeto usado pelos sites antigos.
 
+## Personalização visual e envio de fotos
+
+Depois da migração de agendamento público, execute também:
+
+`supabase/migrations/202610250002_customization_uploads.sql`
+
+Ela adiciona descrição, endereço, logo, capa e cor da barbearia, fotos de serviços e profissionais, e cria o bucket público `agenda-photos`. As políticas permitem que cada conta autenticada envie/edite/exclua arquivos somente dentro da pasta da própria barbearia; a leitura pública serve para exibir as imagens na página de agendamento. O limite por imagem é 8 MB.
+
+Passos:
+1. Abra o arquivo `202610250002_customization_uploads.sql` no GitHub e copie todo o conteúdo.
+2. No SQL Editor do projeto KOPCODE (`hfxakwkmitmjvmzzyytq`), cole e execute.
+3. Só depois teste os uploads no painel e confira a página pública.
+
 ## Rodar localmente
 
 ```bash
