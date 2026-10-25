@@ -128,7 +128,11 @@ function App() {
   }, [])
 
   useEffect(() => {
-    if (session?.user?.id && !publicSlug) void loadDashboard(session.user.id)
+    if (session?.user?.id && !publicSlug) {
+      setAuthShopName(session.user.user_metadata?.shop_name || '')
+      if (session.user.user_metadata?.shop_name && !shopNameInput) setShopNameInput(session.user.user_metadata.shop_name)
+      void loadDashboard(session.user.id)
+    }
   }, [session?.user?.id, publicSlug, loadDashboard])
 
   const refreshDashboard = async () => {
