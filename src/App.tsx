@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
-  ArrowLeft, ArrowRight, CalendarDays, CheckCircle2, Clock3, Copy, LogOut,
-  Menu, Plus, Scissors, Settings, Share2, ShieldCheck, Trash2, Users, Wallet,
+  ArrowRight, CalendarDays, CheckCircle2, Clock3, Copy, LogOut,
+  Menu, Plus, Scissors, Settings, Share2, ShieldCheck, Users, Wallet,
   X, LoaderCircle, ExternalLink, Link as LinkIcon, LayoutDashboard, CalendarCheck,
-  Store, CircleDollarSign, Sparkles
+  Store, Sparkles
 } from 'lucide-react'
 import { supabase } from './lib/supabase'
 
@@ -169,10 +169,12 @@ function App() {
     event.preventDefault()
     if (!session?.user?.id) return
     setBusy(true); setError('')
-    const slug = slugify(shopSlugInput || shopNameInput)
+    const finalShopName = (shopNameInput || authShopName).trim()
+    const slug = slugify(shopSlugInput || finalShopName)
+    if (!finalShopName) { setError('Informe o nome da barbearia.'); setBusy(false); return }
     if (!slug) { setError('Informe um endereço válido para a barbearia.'); setBusy(false); return }
     const { error: createError } = await supabase.from('barbershops').insert({
-      owner_id: session.user.id, name: shopNameInput.trim(), slug,
+      owner_id: session.user.id, name: finalShopName, slug,
       phone: shopPhoneInput.trim() || null, timezone: 'America/Sao_Paulo',
     })
     if (createError) setError(createError.code === '23505' ? 'Esse endereço já está sendo usado. Tente acrescentar seu bairro ou cidade.' : createError.message)
@@ -247,9 +249,7 @@ function App() {
       const hh = String(Math.floor(minutes / 60)).padStart(2, '0')
       const mm = String(minutes % 60).padStart(2, '0')
       const start = new Date(publicDate + 'T' + hh + ':' + mm + ':00-03:00')
-      const end = new Date(start.getTime() + selectedPublicService.duration_minutes * 60000)
-      const endLocalMinutes = end.getUTCHours() * 60 + end.getUTCMinutes() + 180
-      const endsWithinHours = endLocalMinutes <= 21 * 60
+      const endsWithinHours = minutes + selectedPublicService.duration_minutes <= 21 * 60
       if (start.getTime() <= now || !endsWithinHours) continue
       slots.push(hh + ':' + mm)
     }
