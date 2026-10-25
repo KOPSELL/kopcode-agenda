@@ -1,45 +1,55 @@
 # AgendaKopcode
 
-Primeira versão do front-end público do SaaS de agendamento e gestão para barbearias.
+Aplicação web de agenda e gestão para barbearias, construída com React, TypeScript, Vite e Supabase.
 
-## Tecnologias
-- React + TypeScript
-- Vite
-- Lucide React
-- CSS responsivo próprio
+## Funcionalidades implementadas no front-end
 
-## Configurar o Supabase
+- Cadastro e login por e-mail e senha via Supabase Auth.
+- Criação e configuração da barbearia com endereço público próprio.
+- Painel de gestão com resumo de agenda, equipe, serviços e atendimentos.
+- Cadastro/ativação de profissionais e serviços.
+- Página pública de agendamento em `/b/slug-da-barbearia`.
+- Consulta de horários ocupados sem expor dados de clientes.
+- Criação de agendamentos validada no banco e proteção contra conflito de horários.
+- Alteração de status e link direto para WhatsApp do cliente.
+- Não há cobrança ou pagamento ativado nesta versão.
 
-O cliente do Supabase fica em `src/lib/supabase.ts` e usa variáveis de ambiente Vite. Copie `.env.example` para `.env.local` e preencha:
+## Supabase configurado
 
-- `VITE_SUPABASE_URL`: `https://hfxakwkmitmjvmzzyytq.supabase.co`
-- `VITE_SUPABASE_PUBLISHABLE_KEY`: a chave pública `sb_publishable_...` do projeto KOPCODE
+O cliente do Supabase está em `src/lib/supabase.ts` e aponta por padrão para o projeto KOPCODE `hfxakwkmitmjvmzzyytq`. A chave `sb_publishable` é pública; nunca coloque uma chave `service_role` ou secret no navegador.
 
-Nunca coloque uma chave `service_role` no front-end. No deploy da Vercel, cadastre as mesmas variáveis em **Settings → Environment Variables** e faça um novo deploy.
+Para sobrescrever valores no ambiente, copie `.env.example` para `.env.local` e preencha `VITE_SUPABASE_URL` e `VITE_SUPABASE_PUBLISHABLE_KEY`. Na Vercel, cadastre as mesmas variáveis em **Settings → Environment Variables** e publique novamente.
+
+## Migração obrigatória para agendamento público
+
+O banco inicial criou as tabelas e políticas do painel. Para que o link público possa carregar a barbearia, consultar horários e gravar reservas, execute também o arquivo:
+
+`supabase/migrations/202610250001_public_booking.sql`
+
+Passos:
+1. Abra o [SQL Editor do projeto KOPCODE](https://supabase.com/dashboard/project/hfxakwkmitmjvmzzyytq/sql/new).
+2. Abra esse arquivo no GitHub, copie todo o conteúdo e cole no SQL Editor.
+3. Confirme que o projeto selecionado é `hfxakwkmitmjvmzzyytq`, depois clique em **Run**.
+4. Não execute em nenhum projeto usado pelos sites antigos.
 
 ## Rodar localmente
+
 ```bash
 npm install
 npm run dev
 ```
 
-## Build de produção
+## Build
+
 ```bash
 npm run build
 ```
 
-## Estado atual
-Esta entrega é somente a camada visual: landing page responsiva, prévia demonstrativa do painel, apresentação dos recursos, planos de referência e perguntas frequentes. Os dados do painel são fictícios.
+## Observações importantes
 
-A biblioteca cliente do Supabase e a verificação inicial de conexão já estão no código. Ainda não estão implementados: cadastro/autenticação de usuários, criação de barbearias pelo site, fluxo de agendamento real, pagamentos, renovação automática, OneSignal e ativação do teste de 7 dias. As políticas RLS do banco precisam ser testadas antes de dados reais. Não inserir chaves secretas no front-end.
-
-## Próximas etapas
-1. Criar um projeto Supabase novo e exclusivo para o AgendaKopcode.
-2. Implementar autenticação e isolamento multiempresa com RLS e testes.
-3. Construir o fluxo de cadastro e a área autenticada.
-4. Implementar agendamento público e prevenção de conflitos.
-5. Integrar pagamentos e webhooks idempotentes.
-6. Integrar notificações direcionadas por empresa/usuário.
-7. Validar domínio e publicar na Vercel.
-
-**Importante:** não execute migrações em nenhum projeto Supabase usado pelos outros sites.
+- O banco e o front-end devem ser testados com uma conta nova antes de usar com clientes reais.
+- O link público usa o slug da barbearia. Escolha um slug único.
+- A prevenção de reservas duplicadas é validada no PostgreSQL, não apenas no navegador.
+- Confirmação de e-mail depende da configuração de Authentication no Supabase. Se estiver ativada, o usuário deve confirmar o e-mail antes do primeiro login.
+- Pagamentos, renovação automática, regras avançadas de horários/folgas, notificações push e relatórios completos ainda não estão integrados.
+- Nenhum dos sistemas Supabase antigos deve ser alterado.
