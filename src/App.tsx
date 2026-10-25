@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import {
   ArrowDownRight, ArrowRight, Bell, CalendarDays, Check, CheckCircle2,
-  ChevronDown, Clock3, CreditCard, Menu, Scissors, ShieldCheck,
+  ChevronDown, Clock3, Menu, Scissors, ShieldCheck,
   Sparkles, TrendingUp, Users, Wallet, X, Zap
 } from 'lucide-react'
 
