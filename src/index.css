@@ -20,3 +20,38 @@
 .booking-heading .eyebrow{color:var(--shop-accent,var(--gold))}
 .public-option-photo{width:100%;height:135px;object-fit:cover;border-radius:9px;border:1px solid var(--line);margin-top:9px}
 @media(max-width:760px){.upload-grid{grid-template-columns:1fr}.public-cover{height:130px}}
+
+
+/* Identidade visual premium da página pública da barbearia */
+.booking-heading{padding:0 0 18px}
+.booking-hero{position:relative;isolation:isolate;overflow:hidden;display:flex;align-items:flex-end;justify-content:center;min-height:300px;border:1px solid var(--line);border-radius:20px;background-color:#191917;background-size:cover;background-position:center;background-image:radial-gradient(ellipse at 50% 0%,rgba(217,183,123,.12),transparent 65%)}
+.booking-hero::before{content:"";position:absolute;inset:0;z-index:-1;background:linear-gradient(180deg,rgba(12,12,11,.2) 0%,rgba(12,12,11,.55) 42%,rgba(12,12,11,.97) 100%)}
+.booking-hero-content{width:100%;padding:30px 20px 24px;text-align:center}
+.booking-hero-content .public-logo{margin:0 auto 14px}
+.booking-hero-content h1{margin-bottom:9px;text-shadow:0 2px 18px rgba(0,0,0,.55)}
+.booking-hero-content>p{color:#e0ddd5;text-shadow:0 1px 8px rgba(0,0,0,.8)}
+.public-logo{display:grid;place-items:center;width:92px;height:92px;object-fit:contain;border-radius:50%;padding:5px;margin:0 auto 15px;border:2px solid var(--shop-accent,var(--gold));background:#191917;box-shadow:0 8px 28px rgba(0,0,0,.35)}
+.public-logo-fallback{display:flex;color:var(--shop-accent,var(--gold));font:800 34px var(--serif)}
+.public-address{margin-top:8px!important}
+.photo-gallery{margin:0 0 20px;padding:14px;border:1px solid var(--line);border-radius:16px;background:linear-gradient(145deg,#1c1b18,#141412);box-shadow:0 18px 45px rgba(0,0,0,.18)}
+.gallery-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 2px 11px}
+.gallery-heading .eyebrow{font-size:9px;letter-spacing:1.2px}
+.gallery-counter{font-size:10px;color:var(--muted);font-variant-numeric:tabular-nums}
+.gallery-stage{position:relative;isolation:isolate;overflow:hidden;aspect-ratio:16/10;min-height:190px;border-radius:11px;background:#10100f}
+.gallery-stage>img{display:block;width:100%;height:100%;position:absolute;inset:0;object-fit:cover;object-position:center;animation:galleryFade .35s ease-out}
+.gallery-shade{position:absolute;inset:0;background:linear-gradient(180deg,transparent 35%,rgba(0,0,0,.76) 100%);pointer-events:none}
+.gallery-caption{position:absolute;left:16px;right:56px;bottom:16px;display:grid;gap:4px;text-align:left}
+.gallery-caption span{font-size:9px;font-weight:800;letter-spacing:1.4px;text-transform:uppercase;color:var(--shop-accent,var(--gold))}
+.gallery-caption strong{font:700 17px var(--serif);color:#fff;overflow-wrap:anywhere}
+.gallery-arrow{position:absolute;top:50%;transform:translateY(-50%);display:grid;place-items:center;width:36px;height:36px;border:1px solid rgba(255,255,255,.28);border-radius:50%;color:#fff;background:rgba(10,10,10,.5);backdrop-filter:blur(8px)}
+.gallery-arrow:hover{background:var(--shop-accent,var(--gold));color:#15130f}
+.gallery-prev{left:10px}.gallery-next{right:10px}
+.gallery-dots{display:flex;align-items:center;justify-content:center;gap:6px;padding-top:12px}
+.gallery-dot{width:6px;height:6px;border:0;border-radius:99px;background:#5e5b54;padding:0;transition:width .2s,background .2s}
+.gallery-dot.active{width:21px;background:var(--shop-accent,var(--gold))}
+@keyframes galleryFade{from{opacity:.45;transform:scale(1.015)}to{opacity:1;transform:scale(1)}}
+.logo-preview{width:110px;height:110px;object-fit:contain;border-radius:50%;padding:8px}
+.cover-preview{aspect-ratio:16/6;height:auto;min-height:82px;object-fit:cover;object-position:center}
+.public-option-photo{display:block;width:100%;height:auto;aspect-ratio:16/9;object-fit:cover;object-position:center;border-radius:10px}
+@media(max-width:760px){.booking-hero{min-height:260px;border-radius:16px}.booking-hero-content{padding:25px 14px 20px}.public-logo{width:82px;height:82px}.photo-gallery{padding:10px;margin-bottom:16px}.gallery-stage{aspect-ratio:4/3;min-height:180px}.gallery-caption{left:13px;bottom:13px}.gallery-caption strong{font-size:15px}.gallery-arrow{width:32px;height:32px}.gallery-heading .eyebrow{font-size:8px;letter-spacing:.9px}}
+@media(prefers-reduced-motion:reduce){.gallery-stage>img{animation:none}}
