@@ -356,17 +356,42 @@ function App() {
   }, [publicShop, publicDate, selectedPublicService, publicBarber])
 
   const [busySlots, setBusySlots] = useState<{ starts_at: string; ends_at: string }[]>([])
+  const fetchBusySlots = useCallback(async () => {
+    if (!publicShop || !publicDate || !publicBarber) {
+      setBusySlots([])
+      return [] as { starts_at: string; ends_at: string }[]
+    }
+    const { data, error: queryError } = await supabase.rpc('get_public_busy_slots', {
+      p_slug: publicShop.slug, p_date: publicDate, p_barber_id: publicBarber,
+    })
+    if (queryError) throw queryError
+    const latest = (data || []) as { starts_at: string; ends_at: string }[]
+    setBusySlots(latest)
+    return latest
+  }, [publicShop?.slug, publicDate, publicBarber])
+
+  // Atualiza disponibilidade em outras abas/dispositivos e ao voltar para a página.
   useEffect(() => {
     if (!publicShop || !publicDate || !publicBarber) { setBusySlots([]); return }
-    let alive = true
-    supabase.rpc('get_public_busy_slots', { p_slug: publicShop.slug, p_date: publicDate, p_barber_id: publicBarber })
-      .then(({ data, error: e }) => {
-        if (!alive) return
-        if (e) setError('Não foi possível consultar os horários ocupados. Execute a migração SQL de agendamento público.')
-        else setBusySlots((data || []) as { starts_at: string; ends_at: string }[])
+    let active = true
+    const refresh = () => {
+      void fetchBusySlots().catch(() => {
+        if (active) setError('Não foi possível atualizar a agenda. Atualize a página antes de tentar novamente.')
       })
-    return () => { alive = false }
-  }, [publicShop, publicDate, publicBarber])
+    }
+    refresh()
+    const timer = window.setInterval(refresh, 10000)
+    const onFocus = () => refresh()
+    const onVisibility = () => { if (document.visibilityState === 'visible') refresh() }
+    window.addEventListener('focus', onFocus)
+    document.addEventListener('visibilitychange', onVisibility)
+    return () => {
+      active = false
+      window.clearInterval(timer)
+      window.removeEventListener('focus', onFocus)
+      document.removeEventListener('visibilitychange', onVisibility)
+    }
+  }, [publicShop?.slug, publicDate, publicBarber, fetchBusySlots])
 
   const availableSlots = publicSlots.filter(slot => {
     if (!selectedPublicService) return false
@@ -379,14 +404,40 @@ function App() {
     event.preventDefault()
     if (!publicShop || !selectedPublicService || !publicBarber || !publicTime) return
     setBusy(true); setError('')
-    const startAt = new Date(publicDate + 'T' + publicTime + ':00-03:00').toISOString()
-    const { data, error: e } = await supabase.rpc('create_public_appointment', {
-      p_slug: publicShop.slug, p_barber_id: publicBarber, p_service_id: selectedPublicService.id,
-      p_starts_at: startAt, p_client_name: publicName.trim(), p_client_phone: publicPhone.trim(), p_notes: publicNotes.trim() || null,
-    })
-    if (e) setError(e.message)
-    else { setPublicSuccess(data); setPublicTime('') }
-    setBusy(false)
+    try {
+      // Revalida no servidor imediatamente antes da tentativa de reserva.
+      const latest = await fetchBusySlots()
+      const startMs = new Date(publicDate + 'T' + publicTime + ':00-03:00').getTime()
+      const endMs = startMs + selectedPublicService.duration_minutes * 60000
+      const occupied = latest.some(item =>
+        startMs < new Date(item.ends_at).getTime() && endMs > new Date(item.starts_at).getTime()
+      )
+      if (occupied) {
+        setPublicTime('')
+        setError('Esse horário acabou de ser reservado em outro dispositivo. Escolha outro horário.')
+        return
+      }
+      const startAt = new Date(startMs).toISOString()
+      const { data, error: bookingError } = await supabase.rpc('create_public_appointment', {
+        p_slug: publicShop.slug, p_barber_id: publicBarber, p_service_id: selectedPublicService.id,
+        p_starts_at: startAt, p_client_name: publicName.trim(), p_client_phone: publicPhone.trim(), p_notes: publicNotes.trim() || null,
+      })
+      if (bookingError) {
+        await fetchBusySlots().catch(() => undefined)
+        setPublicTime('')
+        const message = bookingError.message || ''
+        setError(/exclusion|overlap|reservad|ocupad|horário/i.test(message)
+          ? 'Esse horário acabou de ser reservado em outro dispositivo. Escolha outro horário.'
+          : message)
+      } else {
+        setPublicSuccess(data)
+        setPublicTime('')
+      }
+    } catch (e) {
+      setError(messageOf(e))
+    } finally {
+      setBusy(false)
+    }
   }
 
   if (publicSlug) {
