@@ -83,6 +83,7 @@ create table if not exists public.product_sales (
   product_name text not null,
   quantity integer not null check (quantity > 0),
   unit_price numeric(10,2) not null check (unit_price >= 0),
+  cost_at_sale numeric(10,2) not null default 0 check (cost_at_sale >= 0),
   total numeric(10,2) generated always as (quantity * unit_price) stored,
   sold_by uuid references auth.users(id) on delete set null,
   created_at timestamptz not null default now(),
@@ -90,6 +91,9 @@ create table if not exists public.product_sales (
     foreign key (product_id, barbershop_id)
     references public.products(id, barbershop_id)
 );
+
+alter table public.product_sales
+  add column if not exists cost_at_sale numeric(10,2) not null default 0;
 
 create table if not exists public.shop_expenses (
   id uuid primary key default gen_random_uuid(),
@@ -132,6 +136,7 @@ begin
 
   new.product_name := v_product.name;
   new.unit_price := v_product.price;
+  new.cost_at_sale := v_product.cost_price;
 
   update public.products
   set stock_quantity = stock_quantity - new.quantity,
