@@ -165,3 +165,8 @@
   .commission-field{width:105px}
   .accounting-lower .service-form{grid-template-columns:1fr}
 }
+
+
+.stock-field{width:90px;min-width:82px;font-size:10px}
+.stock-field input{padding:8px 9px;font-size:12px}
+@media(max-width:760px){.stock-field{width:100%;max-width:110px}}
