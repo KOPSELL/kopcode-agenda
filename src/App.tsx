@@ -190,16 +190,11 @@ function App() {
 
     const channel = supabase
       .channel('agenda-appointments-' + shopId)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'appointments',
-          filter: 'barbershop_id=eq.' + shopId,
-        },
-        () => { void loadDashboard(userId) },
-      )
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'appointments', filter: 'barbershop_id=eq.' + shopId }, () => { void loadDashboard(userId) })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'products', filter: 'barbershop_id=eq.' + shopId }, () => { void loadDashboard(userId) })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'product_categories', filter: 'barbershop_id=eq.' + shopId }, () => { void loadDashboard(userId) })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'product_sales', filter: 'barbershop_id=eq.' + shopId }, () => { void loadDashboard(userId) })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'shop_expenses', filter: 'barbershop_id=eq.' + shopId }, () => { void loadDashboard(userId) })
       .subscribe()
 
     return () => { void supabase.removeChannel(channel) }
