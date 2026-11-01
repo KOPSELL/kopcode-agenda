@@ -74,7 +74,7 @@ Depois das migrações anteriores, execute também:
 
 `supabase/migrations/202611010001_products_accounting_commissions.sql`
 
-Ela cria categorias e produtos por barbearia, registra vendas com baixa automática e transacional do estoque, lança despesas, adiciona percentual de comissão por profissional e congela o preço do serviço no agendamento para preservar o histórico financeiro. As tabelas novas usam RLS e só podem ser acessadas pelo proprietário da respectiva barbearia.
+Ela cria categorias e produtos por barbearia, permite ajustar estoque e alerta de estoque mínimo, registra vendas com baixa automática e transacional do estoque, lança despesas, adiciona percentual de comissão por profissional e congela o preço do serviço no agendamento para preservar o histórico financeiro. As tabelas novas usam RLS e só podem ser acessadas pelo proprietário da respectiva barbearia. Categorias, estoque, vendas, despesas e agendamentos são sincronizados em tempo real entre dispositivos da mesma barbearia.
 
 **Ordem das migrações:** `202610250001_public_booking.sql` → `202610250002_customization_uploads.sql` → `202610250003_realtime_no_double_booking.sql` → `202610270001_booking_collision_guard.sql` → `202611010001_products_accounting_commissions.sql`.
 
