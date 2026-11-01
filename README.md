@@ -6,7 +6,11 @@ Aplicação web de agenda e gestão para barbearias, construída com React, Type
 
 - Cadastro e login por e-mail e senha via Supabase Auth.
 - Criação e configuração da barbearia com endereço público próprio.
-- Painel de gestão com resumo de agenda, equipe, serviços e atendimentos.
+- Painel de gestão com boas-vindas personalizadas pelo nome da barbearia.
+- Gestão de profissionais, serviços, categorias e produtos.
+- Controle de estoque e registro de vendas com baixa de estoque transacional.
+- Contabilidade mensal com faturamento, despesas e comissões individuais por barbeiro.
+- Histórico financeiro protegido por preço do serviço salvo no momento do agendamento.
 - Cadastro/ativação de profissionais e serviços.
 - Página pública de agendamento em `/b/slug-da-barbearia`.
 - Consulta de horários ocupados sem expor dados de clientes.
@@ -64,11 +68,23 @@ npm run dev
 npm run build
 ```
 
+## Produtos, estoque, contabilidade e comissões
+
+Depois das migrações anteriores, execute também:
+
+`supabase/migrations/202611010001_products_accounting_commissions.sql`
+
+Ela cria categorias e produtos por barbearia, registra vendas com baixa automática e transacional do estoque, lança despesas, adiciona percentual de comissão por profissional e congela o preço do serviço no agendamento para preservar o histórico financeiro. As tabelas novas usam RLS e só podem ser acessadas pelo proprietário da respectiva barbearia.
+
+**Ordem das migrações:** `202610250001_public_booking.sql` → `202610250002_customization_uploads.sql` → `202610250003_realtime_no_double_booking.sql` → `202610270001_booking_collision_guard.sql` → `202611010001_products_accounting_commissions.sql`.
+
+A contabilidade considera atendimentos com status **Concluído**. Configure o percentual de cada profissional na aba **Contabilidade**. A comissão é calculada sobre o valor do serviço salvo no agendamento. Despesas e vendas de produtos são registradas separadamente.
+
 ## Observações importantes
 
 - O banco e o front-end devem ser testados com uma conta nova antes de usar com clientes reais.
 - O link público usa o slug da barbearia. Escolha um slug único.
 - A prevenção de reservas duplicadas é validada no PostgreSQL, não apenas no navegador.
 - Confirmação de e-mail depende da configuração de Authentication no Supabase. Se estiver ativada, o usuário deve confirmar o e-mail antes do primeiro login.
-- Pagamentos, renovação automática, regras avançadas de horários/folgas, notificações push e relatórios completos ainda não estão integrados.
+- Pagamentos online, renovação automática, regras avançadas de horários/folgas e notificações push ainda não estão integrados.
 - Nenhum dos sistemas Supabase antigos deve ser alterado.
