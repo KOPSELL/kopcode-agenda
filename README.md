@@ -51,9 +51,11 @@ Passos:
 
 ## Proteção contra horários duplicados e atualização em tempo real
 
-Execute por último `supabase/migrations/202610250003_realtime_no_double_booking.sql`. Ela cria a trava no PostgreSQL para impedir sobreposição de reservas pendentes/confirmadas do mesmo profissional e habilita a publicação Realtime da tabela de agendamentos. Se já houver reservas conflitantes, a migração para sem apagar ou cancelar reservas; resolva os conflitos indicados e execute novamente.
+Execute `supabase/migrations/202610250003_realtime_no_double_booking.sql` depois das duas migrações anteriores. Ela cria a trava no PostgreSQL para impedir sobreposição de reservas pendentes/confirmadas do mesmo profissional e habilita a publicação Realtime da tabela de agendamentos. Se já houver reservas conflitantes, a migração para sem apagar ou cancelar reservas; resolva os conflitos indicados e execute novamente.
 
-**Ordem obrigatória das migrações:** `202610250001_public_booking.sql` → `202610250002_customization_uploads.sql` → `202610250003_realtime_no_double_booking.sql`. Execute todas somente no projeto `hfxakwkmitmjvmzzyytq`, nunca nos Supabase dos outros sites.
+Execute também `supabase/migrations/202610270001_booking_collision_guard.sql` para reforçar a trava de colisão. A migração verifica conflitos antes de criar a constraint e preserva todos os registros existentes.
+
+**Ordem obrigatória das migrações:** `202610250001_public_booking.sql` → `202610250002_customization_uploads.sql` → `202610250003_realtime_no_double_booking.sql` → `202610270001_booking_collision_guard.sql` → `202611010001_products_accounting_commissions.sql`. Execute todas somente no projeto `hfxakwkmitmjvmzzyytq`, nunca nos Supabase dos outros sites.
 
 ## Rodar localmente
 
