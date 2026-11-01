@@ -216,7 +216,7 @@ with check (exists (
 
 
 -- Sincroniza estoque, categorias, vendas e despesas entre os dispositivos da mesma barbearia.
-do $
+do $$
 declare
   v_table text;
 begin
@@ -232,6 +232,6 @@ begin
       end if;
     end loop;
   end if;
-end $;
+end $$;
 
 commit;
