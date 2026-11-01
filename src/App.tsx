@@ -152,10 +152,6 @@ function App() {
       supabase.from('barbers').select('id,name,active,photo_url,commission_percent').eq('barbershop_id', owned.id).order('name'),
       supabase.from('services').select('id,name,description,price,duration_minutes,active,photo_url').eq('barbershop_id', owned.id).order('name'),
       supabase.from('appointments').select('id,client_name,client_phone,starts_at,ends_at,status,barber_id,service_id,notes,price_at_booking').eq('barbershop_id', owned.id).order('starts_at', { ascending: true }).limit(1000),
-      supabase.from('product_categories').select('id,name').eq('barbershop_id', owned.id).order('name'),
-      supabase.from('products').select('id,name,category_id,price,cost_price,stock_quantity,min_stock,active').eq('barbershop_id', owned.id).order('name'),
-      supabase.from('product_sales').select('id,product_name,quantity,unit_price,total,created_at').eq('barbershop_id', owned.id).order('created_at', { ascending: false }).limit(1000),
-      supabase.from('shop_expenses').select('id,description,category,amount,expense_date').eq('barbershop_id', owned.id).order('expense_date', { ascending: false }).limit(1000),
     ])
     const [categoriesResult, productsResult, salesResult, expensesResult] = await Promise.all([
       supabase.from('product_categories').select('id,name').eq('barbershop_id', owned.id).order('name'),
