@@ -224,3 +224,11 @@
   .booking-card .btn{min-height:48px}
 }
 @media(max-width:390px){.public-product-grid{grid-template-columns:1fr 1fr}.public-product-card>img,.public-product-placeholder{height:100px}}
+
+.business-insights{margin:18px 0;padding:20px}
+.insight-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.insight-grid>div{display:grid;gap:7px;min-width:0;padding:14px;border:1px solid var(--line);border-radius:10px;background:#11110f}
+.insight-grid small{font-size:10px;color:var(--muted)}
+.insight-grid strong{font:700 18px var(--serif);color:var(--gold);overflow-wrap:anywhere}
+.insight-grid span{font-size:10px;color:var(--muted);line-height:1.5}
+@media(max-width:760px){.business-insights{padding:15px}.insight-grid{grid-template-columns:1fr}.insight-grid>div{padding:12px}.insight-grid strong{font-size:16px}}
