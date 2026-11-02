@@ -170,3 +170,57 @@
 .stock-field{width:90px;min-width:82px;font-size:10px}
 .stock-field input{padding:8px 9px;font-size:12px}
 @media(max-width:760px){.stock-field{width:100%;max-width:110px}}
+
+/* Experiência mobile, CRM, catálogo público e planos */
+.public-products{margin:0 0 20px;padding:18px;border:1px solid var(--line);border-radius:16px;background:#191917}
+.public-products h3{margin:6px 0}.public-products .panel-title{margin-bottom:15px}
+.public-product-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.public-product-card{overflow:hidden;border:1px solid var(--line);border-radius:12px;background:#11110f;min-width:0}
+.public-product-card>img,.public-product-placeholder{display:grid;width:100%;height:150px;object-fit:cover;place-items:center;background:#24231f;color:var(--gold)}
+.public-product-card>div:last-child{display:grid;gap:6px;padding:12px}
+.public-product-card small{font-size:9px;color:var(--gold);text-transform:uppercase;letter-spacing:1px}
+.public-product-card strong{font-size:13px;overflow-wrap:anywhere}
+.public-product-card p{font-size:10px;line-height:1.5;color:var(--muted);margin:0}
+.public-product-card b{font:700 17px var(--serif);color:var(--gold)}
+.crm-row{align-items:flex-start}
+.crm-notes{display:grid;gap:6px;margin-top:8px;font-size:10px;color:var(--muted)}
+.crm-notes textarea{width:100%;min-height:56px;font:inherit;font-size:11px}
+.crm-points{display:grid;gap:5px;min-width:86px;text-align:center}
+.crm-points strong{font-size:16px;color:var(--gold)}
+.crm-points small{font-size:9px;color:var(--muted)}
+.crm-points a{font-size:10px;color:var(--gold)}
+.loyalty-track{height:5px;background:#34312a;border-radius:99px;overflow:hidden}
+.loyalty-track span{display:block;height:100%;background:var(--gold);border-radius:99px}
+.trial-banner{display:flex;align-items:center;gap:13px;padding:17px;margin:16px 0;border:1px solid rgba(217,183,123,.28);border-radius:12px;background:rgba(217,183,123,.08)}
+.trial-banner>svg{color:var(--gold);flex-shrink:0}
+.trial-banner strong{font-size:13px}.trial-banner p{margin:5px 0 0;color:var(--muted);font-size:11px;line-height:1.6}
+.plan-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.plan-card{display:flex;flex-direction:column;gap:12px;padding:20px;border:1px solid var(--line);border-radius:14px;background:#191917;min-width:0}
+.plan-card .eyebrow{color:var(--gold);font-size:9px;letter-spacing:1.2px}
+.plan-card h3{font:700 24px var(--serif);margin:0}
+.plan-card>strong{font-size:12px;color:var(--gold)}
+.plan-card ul{padding-left:17px;margin:0;display:grid;gap:9px;color:#d4d0c7;font-size:11px;line-height:1.5}
+.plan-current{margin-top:auto;padding-top:12px;border-top:1px solid var(--line);font-size:10px;color:var(--muted)}
+.plan-featured{border-color:rgba(217,183,123,.55);box-shadow:0 12px 35px rgba(0,0,0,.16)}
+@media(max-width:900px){.plan-grid{grid-template-columns:1fr 1fr}}
+@media(max-width:760px){
+  .public-products{padding:13px;margin-bottom:15px}
+  .public-product-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+  .public-product-card>img,.public-product-placeholder{height:118px}
+  .public-product-card>div:last-child{padding:9px;gap:5px}
+  .public-product-card strong{font-size:11px}
+  .public-product-card b{font-size:15px}
+  .plan-grid{grid-template-columns:1fr}
+  .plan-card{padding:17px}
+  .crm-row{display:grid;grid-template-columns:38px minmax(0,1fr);gap:10px}
+  .crm-points{grid-column:2;grid-template-columns:auto auto;align-items:center;text-align:left;justify-content:start}
+  .crm-points .loyalty-track{grid-column:1/-1;width:100%;max-width:180px}
+  .crm-points a{grid-column:1/-1}
+  .trial-banner{align-items:flex-start}
+  .side-nav{padding-bottom:20px}
+  .dashboard-area{min-width:0}
+  .content-section{padding-bottom:calc(24px + env(safe-area-inset-bottom))}
+  .booking-card input,.booking-card select,.booking-card textarea{font-size:16px}
+  .booking-card .btn{min-height:48px}
+}
+@media(max-width:390px){.public-product-grid{grid-template-columns:1fr 1fr}.public-product-card>img,.public-product-placeholder{height:100px}}
