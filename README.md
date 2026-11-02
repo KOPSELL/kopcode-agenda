@@ -55,7 +55,7 @@ Execute `supabase/migrations/202610250003_realtime_no_double_booking.sql` depois
 
 Execute também `supabase/migrations/202610270001_booking_collision_guard.sql` para reforçar a trava de colisão. A migração verifica conflitos antes de criar a constraint e preserva todos os registros existentes.
 
-**Ordem obrigatória das migrações:** `202610250001_public_booking.sql` → `202610250002_customization_uploads.sql` → `202610250003_realtime_no_double_booking.sql` → `202610270001_booking_collision_guard.sql` → `202611010001_products_accounting_commissions.sql`. Execute todas somente no projeto `hfxakwkmitmjvmzzyytq`, nunca nos Supabase dos outros sites.
+**Ordem obrigatória das migrações:** `202610250001_public_booking.sql` → `202610250002_customization_uploads.sql` → `202610250003_realtime_no_double_booking.sql` → `202610270001_booking_collision_guard.sql` → `202611010001_products_accounting_commissions.sql` → `202611020001_crm_loyalty_plans_public_products.sql`. Execute todas somente no projeto `hfxakwkmitmjvmzzyytq`, nunca nos Supabase dos outros sites.
 
 ## Rodar localmente
 
@@ -88,5 +88,5 @@ A contabilidade considera atendimentos com status **Concluído**. Configure o pe
 - O link público usa o slug da barbearia. Escolha um slug único.
 - A prevenção de reservas duplicadas é validada no PostgreSQL, não apenas no navegador.
 - Confirmação de e-mail depende da configuração de Authentication no Supabase. Se estiver ativada, o usuário deve confirmar o e-mail antes do primeiro login.
-- Pagamentos online, renovação automática, regras avançadas de horários/folgas e notificações push ainda não estão integrados.
+- Pagamentos online e renovação automática ainda não estão integrados. Os planos aparecem no painel e os limites de barbeiros são validados no banco, mas a ativação comercial dos upgrades será feita após integrar o provedor de pagamentos. WhatsApp/chatbot e campanhas automatizadas exigem integrações externas e ainda não estão ativos.
 - Nenhum dos sistemas Supabase antigos deve ser alterado.
