@@ -232,3 +232,14 @@
 .insight-grid strong{font:700 18px var(--serif);color:var(--gold);overflow-wrap:anywhere}
 .insight-grid span{font-size:10px;color:var(--muted);line-height:1.5}
 @media(max-width:760px){.business-insights{padding:15px}.insight-grid{grid-template-columns:1fr}.insight-grid>div{padding:12px}.insight-grid strong{font-size:16px}}
+
+
+/* Comissão individual na gestão de profissionais */
+.barber-create-form{display:grid;grid-template-columns:minmax(180px,1fr) 150px auto;align-items:end;gap:12px}
+.barber-create-form label,.barber-commission-control label{display:grid;gap:6px;color:var(--muted);font-size:11px}
+.barber-create-form label input,.barber-commission-control input{width:100%;min-width:0}
+.barber-commission-row{align-items:center;gap:14px}
+.barber-commission-control{display:grid;gap:5px;min-width:145px;text-align:right}
+.barber-commission-control strong{font-size:13px;color:var(--gold)}
+.barber-commission-control small{font-size:10px;color:var(--muted)}
+@media(max-width:760px){.barber-create-form{grid-template-columns:1fr 110px}.barber-create-form>input{grid-column:1/-1}.barber-create-form button{min-height:44px}.barber-commission-row{display:grid;grid-template-columns:38px minmax(0,1fr)}.barber-commission-row>.manage-main{min-width:0}.barber-commission-control{grid-column:2;text-align:left;grid-template-columns:1fr;min-width:0}.barber-commission-row>button{grid-column:2;justify-self:start}}
