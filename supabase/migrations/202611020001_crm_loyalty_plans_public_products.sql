@@ -145,6 +145,38 @@ create trigger appointments_sync_crm
 before insert or update of status, client_name, client_phone, service_id
 on public.appointments for each row execute function public.sync_crm_from_appointment();
 
+-- Importa também o histórico que já existia antes da ativação do CRM.
+insert into public.crm_customers (
+  barbershop_id, full_name, phone, preferred_services,
+  total_visits, no_show_count, loyalty_points, last_visit_at
+)
+select
+  a.barbershop_id,
+  (array_agg(a.client_name order by a.starts_at desc))[1],
+  regexp_replace(a.client_phone, '\D', '', 'g'),
+  coalesce(array_agg(distinct s.name) filter (where s.name is not null), '{}'),
+  count(*) filter (where a.status = 'completed')::integer,
+  count(*) filter (where a.status = 'no_show')::integer,
+  count(*) filter (where a.status = 'completed')::integer,
+  max(a.starts_at) filter (where a.status = 'completed')
+from public.appointments a
+left join public.services s on s.id = a.service_id and s.barbershop_id = a.barbershop_id
+where nullif(regexp_replace(a.client_phone, '\D', '', 'g'), '') is not null
+group by a.barbershop_id, regexp_replace(a.client_phone, '\D', '', 'g')
+on conflict (barbershop_id, phone) do nothing;
+
+insert into public.loyalty_transactions (barbershop_id, customer_id, appointment_id, points, description)
+select a.barbershop_id, c.id, a.id, 1, 'Ponto por atendimento concluído (histórico)'
+from public.appointments a
+join public.crm_customers c
+  on c.barbershop_id = a.barbershop_id
+ and c.phone = regexp_replace(a.client_phone, '\D', '', 'g')
+where a.status = 'completed'
+  and not exists (
+    select 1 from public.loyalty_transactions lt
+    where lt.appointment_id = a.id and lt.barbershop_id = a.barbershop_id
+  );
+
 create or replace function public.get_public_products(p_slug text)
 returns jsonb language sql stable security definer set search_path = ''
 as $$
