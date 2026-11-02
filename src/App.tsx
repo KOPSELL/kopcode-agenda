@@ -77,7 +77,7 @@ function App() {
   const [publicSuccess, setPublicSuccess] = useState<any>(null)
   const [galleryIndex, setGalleryIndex] = useState(0)
   const [newBarberName, setNewBarberName] = useState('')
-  const [newBarberCommission, setNewBarberCommission] = useState('50')
+  const [newBarberCommission, setNewBarberCommission] = useState('0')
   const [newServiceName, setNewServiceName] = useState('')
   const [newServicePrice, setNewServicePrice] = useState('35')
   const [newServiceDuration, setNewServiceDuration] = useState('30')
@@ -322,7 +322,7 @@ function App() {
     setBusy(true); setError('')
     const { error: e } = await supabase.from('barbers').insert({ barbershop_id: shop.id, name: newBarberName.trim(), active: true, commission_percent: Number(newBarberCommission) })
     if (e) setError(e.message)
-    else { setNewBarberName(''); setNewBarberCommission('50'); setNotice('Profissional cadastrado.'); await refreshDashboard() }
+    else { setNewBarberName(''); setNewBarberCommission('0'); setNotice('Profissional cadastrado.'); await refreshDashboard() }
     setBusy(false)
   }
 
