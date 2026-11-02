@@ -82,6 +82,17 @@ Ela cria categorias e produtos por barbearia, permite ajustar estoque e alerta d
 
 A contabilidade considera atendimentos com status **Concluído**. Configure o percentual de cada profissional na aba **Contabilidade**. A comissão é calculada sobre o valor do serviço salvo no agendamento. Despesas e vendas de produtos são registradas separadamente.
 
+## CRM, fidelidade, catálogo público e planos SaaS
+
+Execute por último `supabase/migrations/202611020001_crm_loyalty_plans_public_products.sql` no projeto Supabase KOPCODE (`hfxakwkmitmjvmzzyytq`). Essa migração importa os clientes e o histórico de agendamentos existentes, mantém preferências e observações por barbearia, soma 1 ponto por atendimento concluído, registra faltas, expõe produtos ativos com estoque no link público e cria o plano Início com cinco dias de teste. Os limites de profissionais são verificados no PostgreSQL.
+
+Planos exibidos no painel:
+- **Início:** até 2 barbeiros e 5 dias de teste.
+- **Premium:** até 4 barbeiros.
+- **Definitivo:** profissionais ilimitados.
+
+Pagamentos ainda não estão conectados. Chat/WhatsApp automatizado, chatbot, campanhas e repescagem exigem integração externa e não devem ser anunciados como ativos até essa integração estar concluída.
+
 ## Observações importantes
 
 - O banco e o front-end devem ser testados com uma conta nova antes de usar com clientes reais.
