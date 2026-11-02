@@ -176,6 +176,12 @@ function App() {
     setProducts((productsResult.data || []) as Product[])
     setProductSales((salesResult.data || []) as ProductSale[])
     setExpenses((expensesResult.data || []) as ShopExpense[])
+    const [crm, plan] = await Promise.all([
+      supabase.from('crm_customers').select('id,full_name,phone,notes,preferred_services,total_visits,no_show_count,loyalty_points,last_visit_at').eq('barbershop_id', owned.id).order('last_visit_at', { ascending: false, nullsFirst: false }),
+      supabase.from('shop_subscriptions').select('plan_code,status,trial_ends_at').eq('barbershop_id', owned.id).maybeSingle(),
+    ])
+    setCrmCustomers((crm.data || []) as CrmCustomer[])
+    setShopPlan((plan.data || null) as ShopPlan | null)
     setBusy(false)
   }, [])
 
