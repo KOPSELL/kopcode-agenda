@@ -105,7 +105,12 @@ as $$
 declare
   v_customer_id uuid;
   v_service_name text;
+  v_was_no_show boolean := false;
 begin
+  if tg_op = 'UPDATE' then
+    v_was_no_show := old.status = 'no_show';
+  end if;
+
   select name into v_service_name from public.services
   where id = new.service_id and barbershop_id = new.barbershop_id;
 
@@ -132,7 +137,7 @@ begin
     insert into public.loyalty_transactions (barbershop_id, customer_id, appointment_id, points, description)
     values (new.barbershop_id, v_customer_id, new.id, 1, 'Ponto por atendimento concluído');
     new.loyalty_points_awarded := true;
-  elsif new.status = 'no_show' and (tg_op = 'INSERT' or old.status is distinct from 'no_show') then
+  elsif new.status = 'no_show' and not v_was_no_show then
     update public.crm_customers set no_show_count = no_show_count + 1, updated_at = now()
     where id = v_customer_id;
   end if;
