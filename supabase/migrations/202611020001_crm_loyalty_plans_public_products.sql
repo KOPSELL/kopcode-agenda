@@ -3,6 +3,8 @@
 
 begin;
 
+alter table public.products add column if not exists photo_url text;
+
 create table if not exists public.shop_subscriptions (
   id uuid primary key default gen_random_uuid(),
   barbershop_id uuid not null unique references public.barbershops(id) on delete cascade,
@@ -130,13 +132,8 @@ begin
     insert into public.loyalty_transactions (barbershop_id, customer_id, appointment_id, points, description)
     values (new.barbershop_id, v_customer_id, new.id, 1, 'Ponto por atendimento concluído');
     new.loyalty_points_awarded := true;
-  elsif new.status = 'no_show' then
-    update public.crm_customers set no_show_count = greatest(no_show_count, (
-      select count(*)::integer from public.appointments
-      where barbershop_id = new.barbershop_id
-        and regexp_replace(client_phone, '\D', '', 'g') = regexp_replace(new.client_phone, '\D', '', 'g')
-        and status = 'no_show'
-    )), updated_at = now()
+  elsif new.status = 'no_show' and (tg_op = 'INSERT' or old.status is distinct from 'no_show') then
+    update public.crm_customers set no_show_count = no_show_count + 1, updated_at = now()
     where id = v_customer_id;
   end if;
   return new;
