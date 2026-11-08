@@ -53,7 +53,7 @@ Deno.serve(async (req) => {
     if (!barber || !barber.active) return new Response(JSON.stringify({ error: "Profissional não encontrado ou inativo." }), {
       status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
-    if (barber.user_id) return new Response(JSON.stringify({ error: "Este profissional já possui acesso. Use a opção de redefinir senha." }), {
+    if (barber.user_id) return new Response(JSON.stringify({ error: "Este profissional já possui um acesso vinculado." }), {
       status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
 
