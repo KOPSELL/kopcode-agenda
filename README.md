@@ -57,6 +57,38 @@ Execute também `supabase/migrations/202610270001_booking_collision_guard.sql` p
 
 **Ordem obrigatória das migrações:** `202610250001_public_booking.sql` → `202610250002_customization_uploads.sql` → `202610250003_realtime_no_double_booking.sql` → `202610270001_booking_collision_guard.sql` → `202611010001_products_accounting_commissions.sql` → `202611020001_crm_loyalty_plans_public_products.sql`. Execute todas somente no projeto `hfxakwkmitmjvmzzyytq`, nunca nos Supabase dos outros sites.
 
+## Notificações push de novos agendamentos (OneSignal)
+
+O frontend usa o OneSignal Web SDK com o App ID do AgendaKopcode. O envio automático é feito pela Edge Function `onesignal-new-appointment`, que consulta novamente o agendamento e o proprietário no Supabase e envia o push somente ao `owner_id` da barbearia daquele registro. A REST API Key nunca deve ser colocada no frontend.
+
+### Publicar a Edge Function
+
+No terminal, na raiz deste repositório, execute:
+
+```bash
+supabase functions deploy onesignal-new-appointment --no-verify-jwt
+```
+
+No Supabase do AgendaKopcode (`hfxakwkmitmjvmzzyytq`), em **Project Settings → Edge Functions → Secrets**, configure:
+- `ONESIGNAL_REST_API_KEY`: REST API Key privada do aplicativo OneSignal.
+- `AGENDA_WEBHOOK_SECRET`: uma senha longa e aleatória criada por você.
+
+A função já recebe `SUPABASE_URL` e `SUPABASE_SERVICE_ROLE_KEY` do ambiente das Edge Functions. Nunca publique esses valores no GitHub nem no navegador.
+
+### Criar o Database Webhook
+
+No Supabase, abra **Database → Webhooks → Create a new webhook** e configure:
+- Name: `agenda-onesignal-new-appointment`
+- Table: `public.appointments`
+- Events: somente **Insert**
+- Type: **Supabase Edge Functions**
+- Function: `onesignal-new-appointment`
+- HTTP Header: `x-agenda-webhook-secret: VALOR_EXATO_DE_AGENDA_WEBHOOK_SECRET`
+
+O segredo do header deve ser exatamente o mesmo valor cadastrado em `AGENDA_WEBHOOK_SECRET`. Não inclua o segredo em código ou commit. Salve o webhook e faça um agendamento de teste usando uma conta de barbearia que já ativou as notificações no navegador.
+
+A função direciona o push usando o External ID autenticado do proprietário e o `owner_id` lido diretamente da barbearia relacionada ao agendamento. Não envia para segmentos gerais nem para outras barbearias. Se o proprietário ainda não tiver um dispositivo inscrito no OneSignal, a API poderá retornar que não há destinatário inscrito; nesse caso, abra o painel nessa conta e ative as notificações.
+
 ## Rodar localmente
 
 ```bash
