@@ -79,6 +79,22 @@ create policy appointments_read_assigned_barber
 on public.appointments for select to authenticated
 using (public.is_current_user_assigned_barber(barbershop_id, barber_id));
 
+-- O portal do barbeiro é somente leitura: apenas proprietário/admin atualiza
+-- ou exclui agendamentos. A criação pública continua pela RPC SECURITY DEFINER.
+drop policy if exists appointments_update_assigned_barber on public.appointments;
+drop policy if exists appointments_isolation_update on public.appointments;
+create policy appointments_isolation_update
+on public.appointments as restrictive
+for update to authenticated
+using (public.has_shop_role(barbershop_id, array['owner','admin']::text[]))
+with check (public.has_shop_role(barbershop_id, array['owner','admin']::text[]));
+
+drop policy if exists appointments_isolation_delete on public.appointments;
+create policy appointments_isolation_delete
+on public.appointments as restrictive
+for delete to authenticated
+using (public.has_shop_role(barbershop_id, array['owner','admin']::text[]));
+
 -- Barbeiro só pode ler o próprio registro; a criação/edição de contas continua
 -- exclusivamente no servidor, pela Edge Function autenticada do proprietário.
 revoke all on function public.current_user_barber_id(uuid) from public;
