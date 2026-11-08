@@ -10,9 +10,9 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return new Response("Method not allowed", { status: 405, headers: corsHeaders });
 
-  const url = Deno.env.get("SUPABASE_URL");
+  const url = Deno.env.get("PROJECT_URL") || Deno.env.get("SUPABASE_URL");
   const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
-  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  const serviceKey = Deno.env.get("SERVICE_ROLE_KEY") || Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   if (!url || !anonKey || !serviceKey) {
     return new Response(JSON.stringify({ error: "Configuração do Supabase incompleta." }), {
       status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
