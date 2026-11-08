@@ -72,12 +72,15 @@ Deno.serve(async (req) => {
 
     const [{ data: service }, { data: barber }] = await Promise.all([
       supabase.from("services").select("name").eq("id", appointment.service_id).eq("barbershop_id", shop.id).maybeSingle(),
-      supabase.from("barbers").select("name").eq("id", appointment.barber_id).eq("barbershop_id", shop.id).maybeSingle(),
+      supabase.from("barbers").select("name,user_id,notifications_enabled").eq("id", appointment.barber_id).eq("barbershop_id", shop.id).maybeSingle(),
     ]);
 
     const date = new Intl.DateTimeFormat("pt-BR", {
       dateStyle: "short", timeStyle: "short", timeZone: "America/Sao_Paulo",
     }).format(new Date(appointment.starts_at));
+
+    const recipients = [shop.owner_id];
+    if (barber?.user_id && barber.notifications_enabled !== false) recipients.push(barber.user_id);
 
     const response = await fetch("https://api.onesignal.com/notifications", {
       method: "POST",
@@ -87,14 +90,15 @@ Deno.serve(async (req) => {
       },
       body: JSON.stringify({
         app_id: oneSignalAppId,
-        headings: { pt: "Novo agendamento" },
+        headings: { en: "New appointment", pt: "Novo agendamento" },
         contents: {
+          en: `${appointment.client_name} booked ${service?.name || "a service"} on ${date} with ${barber?.name || "your professional"}.`,
           pt: `${appointment.client_name} marcou ${service?.name || "um serviço"} em ${date} com ${barber?.name || "seu profissional"}.`,
         },
-        include_aliases: { external_id: [shop.owner_id] },
+        include_aliases: { external_id: [...new Set(recipients)] },
         target_channel: "push",
         url: "https://agenda.kopcode.com.br/",
-        idempotency_key: `agenda-appointment-${appointment.id}`,
+        idempotency_key: appointment.id,
       }),
     });
 
