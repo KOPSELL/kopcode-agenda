@@ -71,6 +71,35 @@ create policy services_read_assigned_barber
 on public.services for select to authenticated
 using (public.current_user_barber_id(barbershop_id) is not null);
 
+-- Restrições adicionais impedem que políticas permissivas antigas exponham
+-- profissionais ou serviços de colegas/outras barbearias.
+drop policy if exists barbers_isolation_select on public.barbers;
+create policy barbers_isolation_select
+on public.barbers as restrictive
+for select to authenticated
+using (
+  public.has_shop_role(barbershop_id, array['owner','admin']::text[])
+  or user_id = (select auth.uid())
+);
+
+drop policy if exists barbershops_isolation_select on public.barbershops;
+create policy barbershops_isolation_select
+on public.barbershops as restrictive
+for select to authenticated
+using (
+  public.has_shop_role(id, array['owner','admin']::text[])
+  or public.current_user_barber_id(id) is not null
+);
+
+drop policy if exists services_isolation_select on public.services;
+create policy services_isolation_select
+on public.services as restrictive
+for select to authenticated
+using (
+  public.has_shop_role(barbershop_id, array['owner','admin']::text[])
+  or public.current_user_barber_id(barbershop_id) is not null
+);
+
 -- A política restritiva de appointments criada na etapa anterior já limita
 -- a leitura a proprietário/admin ou ao barbeiro vinculado. Recriamos a
 -- política permissiva de leitura própria para garantir o acesso ao painel.
