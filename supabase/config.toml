@@ -1,2 +1,5 @@
 [functions.onesignal-new-appointment]
 verify_jwt = false
+
+[functions.create-barber-user]
+verify_jwt = true
