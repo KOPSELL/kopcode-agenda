@@ -75,15 +75,18 @@ Deno.serve(async (req) => {
     });
     if (createError) throw createError;
 
-    const { error: linkError } = await admin.from("barbers")
+    const { data: linkedBarber, error: linkError } = await admin.from("barbers")
       .update({ user_id: created.user.id })
       .eq("id", barber.id)
       .eq("barbershop_id", barber.barbershop_id)
-      .is("user_id", null);
+      .is("user_id", null)
+      .select("id")
+      .maybeSingle();
 
-    if (linkError) {
+    if (linkError || !linkedBarber) {
       await admin.auth.admin.deleteUser(created.user.id);
-      throw linkError;
+      if (linkError) throw linkError;
+      throw new Error("Outro acesso foi criado para este profissional. Atualize a tela.");
     }
 
     return new Response(JSON.stringify({
