@@ -67,11 +67,17 @@ begin
     else 2
   end;
 
-  select count(*) into v_count
-  from public.barbers b
-  where b.barbershop_id = new.barbershop_id
-    and b.active is true
-    and (tg_op = 'INSERT' or b.id <> new.id);
+  if tg_op = 'INSERT' then
+    select count(*) into v_count
+    from public.barbers b
+    where b.barbershop_id = new.barbershop_id and b.active is true;
+  else
+    select count(*) into v_count
+    from public.barbers b
+    where b.barbershop_id = new.barbershop_id
+      and b.active is true
+      and b.id <> new.id;
+  end if;
 
   if v_count >= v_limit then
     raise exception 'Seu plano % permite até % profissionais ativos. Faça upgrade para adicionar outro profissional.', v_plan, case when v_plan = 'definitivo' then 'ilimitado' else v_limit::text end;
