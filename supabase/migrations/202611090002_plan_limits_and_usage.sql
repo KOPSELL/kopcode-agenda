@@ -125,7 +125,7 @@ begin
     v_plan := 'inicio';
   end if;
 
-  v_limit := case when v_plan = 'inicio' then 2 else 4 end;
+  v_limit := case when v_plan in ('premium', 'definitivo') then 4 else 2 end;
 
   insert into public.shop_plan_usage (barbershop_id, usage_month, identity_changes)
   values (new.id, v_month, 0)
@@ -175,7 +175,7 @@ with check (
     where bs.id = shop_expenses.barbershop_id
       and bs.owner_id = (select auth.uid())
       and ss.plan_code in ('premium', 'definitivo')
-      and (ss.status = 'active' or (ss.status = 'trialing' and ss.trial_ends_at > now()))
+      and ((ss.status = 'active' and (ss.current_period_end is null or ss.current_period_end > now())) or (ss.status = 'trialing' and ss.trial_ends_at > now()))
   )
 );
 
