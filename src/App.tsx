@@ -446,7 +446,7 @@ function App() {
     return data.publicUrl
   }
 
-  const currentPlanCode = shopPlan?.plan_code || 'inicio'
+  const currentPlanCode = shopPlan && (shopPlan.status === 'active' || (shopPlan.status === 'trialing' && !!shopPlan.trial_ends_at && new Date(shopPlan.trial_ends_at).getTime() > Date.now())) ? shopPlan.plan_code : 'inicio'
   const currentPlanLimit = planLimits[currentPlanCode]
   const isPaidPlan = currentPlanCode !== 'inicio'
   const showUpgradeOffer = (feature: string, detail: string, requiredPlan: 'premium' | 'definitivo' = 'premium') => setUpgradeOffer({ feature, detail, requiredPlan })
@@ -897,7 +897,7 @@ function App() {
     { id: 'barbers', label: 'Profissionais', icon: Users },
     { id: 'services', label: 'Serviços', icon: Scissors },
     { id: 'products', label: 'Produtos e estoque', icon: Package },
-    { id: 'accounting', label: 'Contabilidade', icon: Wallet },
+    { id: 'accounting', label: isPaidPlan ? 'Gestão financeira' : 'Faturamento', icon: Wallet },
     { id: 'plan', label: 'Planos', icon: Sparkles },
     { id: 'settings', label: 'Minha barbearia', icon: Settings },
   ]
