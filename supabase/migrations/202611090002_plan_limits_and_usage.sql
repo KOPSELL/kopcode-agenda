@@ -14,6 +14,7 @@ create table if not exists public.shop_plan_usage (
 );
 
 alter table public.shop_plan_usage enable row level security;
+grant select on table public.shop_plan_usage to authenticated;
 drop policy if exists "Owners view monthly plan usage" on public.shop_plan_usage;
 create policy "Owners view monthly plan usage"
 on public.shop_plan_usage for select to authenticated
@@ -111,7 +112,9 @@ begin
   where ss.barbershop_id = new.id
   limit 1;
 
-  if v_status not in ('active', 'trialing') then
+  v_plan := coalesce(v_plan, 'inicio');
+  v_status := coalesce(v_status, 'trialing');
+  if v_status <> 'active' and not (v_status = 'trialing' and v_trial_ends_at > now()) then
     v_plan := 'inicio';
   end if;
 
@@ -165,7 +168,7 @@ with check (
     where bs.id = shop_expenses.barbershop_id
       and bs.owner_id = (select auth.uid())
       and ss.plan_code in ('premium', 'definitivo')
-      and ss.status in ('active', 'trialing')
+      and (ss.status = 'active' or (ss.status = 'trialing' and ss.trial_ends_at > now()))
   )
 );
 
