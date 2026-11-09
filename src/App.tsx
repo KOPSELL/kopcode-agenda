@@ -440,8 +440,18 @@ function App() {
     const { data, error: invokeError } = await supabase.functions.invoke('create-barber-user', {
       body: { barber_id: barber.id, email: barberEmail.trim(), password: barberPassword },
     })
+    let functionErrorMessage = data?.error as string | undefined
+    if (invokeError && !functionErrorMessage) {
+      try {
+        const response = (invokeError as any).context
+        const payload = response?.clone ? await response.clone().json() : null
+        functionErrorMessage = payload?.error
+      } catch {
+        // Mantém a mensagem amigável padrão quando a resposta não contém JSON.
+      }
+    }
     if (invokeError || data?.error) {
-      setError(friendlyError({ message: data?.error || invokeError?.message }, 'Não foi possível criar o acesso.'))
+      setError(friendlyError({ message: functionErrorMessage || invokeError?.message }, 'Não foi possível criar o acesso. Tente novamente em instantes.'))
     } else {
       const link = data?.login_url || window.location.origin + '/barber'
       setBarberLoginLink(link)
