@@ -363,3 +363,6 @@
 
 .plan-status-strip{display:flex;align-items:center;gap:10px;margin:14px clamp(22px,4vw,48px) 0;padding:11px 14px;border:1px solid rgba(217,183,123,.22);border-radius:9px;background:rgba(217,183,123,.07);color:var(--gold);font-size:11px}
 .plan-status-strip span{flex:1;color:#ded5c4}.plan-status-strip button{border:0;background:transparent;color:var(--gold);font-size:11px;font-weight:700;white-space:nowrap}
+
+
+.expense-breakdown{margin-top:18px;padding-top:16px;border-top:1px solid var(--line)}.expense-breakdown h4{font-size:12px;margin:0 0 13px;color:#e9e2d5}.expense-category-row{display:grid;grid-template-columns:minmax(100px,.8fr) minmax(90px,1.5fr) auto;gap:12px;align-items:center;padding:7px 0}.expense-category-row>span{font-size:10px;color:var(--muted)}.expense-category-row>strong{font-size:10px}.expense-category-row .finance-bar-track{grid-column:auto;height:8px}
