@@ -309,3 +309,35 @@
 @media(hover:none) and (pointer:coarse){
   button,a,.side-link{touch-action:manipulation}
 }
+
+
+/* Fechamento financeiro do agendamento */
+.completion-modal-backdrop{position:fixed;inset:0;z-index:1200;display:flex;align-items:center;justify-content:center;padding:18px;background:rgba(0,0,0,.78);backdrop-filter:blur(5px)}
+.completion-modal{width:min(620px,100%);max-height:min(90vh,900px);overflow-y:auto;overscroll-behavior:contain;padding:24px;border:1px solid var(--line);border-radius:16px;background:#191917;box-shadow:0 24px 80px rgba(0,0,0,.5);display:grid;gap:16px}
+.completion-modal h2{margin:4px 0;font:700 25px var(--serif)}
+.completion-modal .panel-title{align-items:flex-start}
+.completion-modal label{display:grid;gap:7px;color:var(--muted);font-size:12px;min-width:0}
+.completion-modal input,.completion-modal select{width:100%;min-width:0}
+.completion-service-total,.completion-grand-total{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:13px 15px;border:1px solid var(--line);border-radius:10px;background:#11110f}
+.completion-service-total strong,.completion-grand-total strong{font-size:18px;color:var(--gold)}
+.completion-two-fields{display:grid;grid-template-columns:1fr 1.4fr;gap:12px}
+.completion-products{display:grid;gap:10px}
+.completion-products h3{margin:0;font-size:14px}
+.completion-products>p,.completion-note{margin:0;color:var(--muted);font-size:11px;line-height:1.5}
+.completion-product-add{display:grid;grid-template-columns:minmax(0,1fr) 75px auto;align-items:end;gap:9px}
+.completion-product-add .btn{min-height:42px;white-space:nowrap}
+.completion-item-list{display:grid;gap:7px}
+.completion-item{display:flex;align-items:center;gap:10px;padding:9px 11px;border:1px solid var(--line);border-radius:8px;font-size:12px}
+.completion-item>span{flex:1;min-width:0}
+.completion-item strong{white-space:nowrap}
+.completion-actions{display:flex;justify-content:flex-end;gap:9px}
+.appointment-payment-info{grid-column:1/-1;color:var(--muted);font-size:10px}
+@media(max-width:600px){
+ .completion-modal-backdrop{align-items:flex-end;padding:0}
+ .completion-modal{width:100%;max-height:94dvh;border-radius:18px 18px 0 0;padding:18px 15px calc(18px + env(safe-area-inset-bottom))}
+ .completion-two-fields{grid-template-columns:1fr}
+ .completion-product-add{grid-template-columns:minmax(0,1fr) 72px}
+ .completion-product-add button{grid-column:1/-1}
+ .completion-actions{display:grid;grid-template-columns:1fr 1fr}
+ .completion-actions .btn{min-height:46px}
+}
