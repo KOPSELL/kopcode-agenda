@@ -39,6 +39,7 @@ declare
   v_limit integer := 2;
   v_count integer := 0;
   v_trial_ends_at timestamptz;
+  v_period_end timestamptz;
 begin
   if not new.active then
     return new;
@@ -48,15 +49,15 @@ begin
     return new;
   end if;
 
-  select coalesce(ss.plan_code, 'inicio'), coalesce(ss.status, 'trialing'), ss.trial_ends_at
-    into v_plan, v_status, v_trial_ends_at
+  select coalesce(ss.plan_code, 'inicio'), coalesce(ss.status, 'trialing'), ss.trial_ends_at, ss.current_period_end
+    into v_plan, v_status, v_trial_ends_at, v_period_end
   from public.shop_subscriptions ss
   where ss.barbershop_id = new.barbershop_id
   limit 1;
 
   v_plan := coalesce(v_plan, 'inicio');
   v_status := coalesce(v_status, 'trialing');
-  if v_status <> 'active' and not (v_status = 'trialing' and v_trial_ends_at > now()) then
+  if not ((v_status = 'active' and (v_period_end is null or v_period_end > now())) or (v_status = 'trialing' and v_trial_ends_at > now())) then
     v_plan := 'inicio';
   end if;
 
@@ -97,6 +98,7 @@ declare
   v_limit integer := 2;
   v_month date := date_trunc('month', now())::date;
   v_trial_ends_at timestamptz;
+  v_period_end timestamptz;
   v_used integer := 0;
 begin
   if tg_op <> 'UPDATE' then
@@ -109,15 +111,15 @@ begin
     return new;
   end if;
 
-  select coalesce(ss.plan_code, 'inicio'), coalesce(ss.status, 'trialing'), ss.trial_ends_at
-    into v_plan, v_status, v_trial_ends_at
+  select coalesce(ss.plan_code, 'inicio'), coalesce(ss.status, 'trialing'), ss.trial_ends_at, ss.current_period_end
+    into v_plan, v_status, v_trial_ends_at, v_period_end
   from public.shop_subscriptions ss
   where ss.barbershop_id = new.id
   limit 1;
 
   v_plan := coalesce(v_plan, 'inicio');
   v_status := coalesce(v_status, 'trialing');
-  if v_status <> 'active' and not (v_status = 'trialing' and v_trial_ends_at > now()) then
+  if not ((v_status = 'active' and (v_period_end is null or v_period_end > now())) or (v_status = 'trialing' and v_trial_ends_at > now())) then
     v_plan := 'inicio';
   end if;
 
@@ -161,7 +163,7 @@ using (
     where bs.id = shop_expenses.barbershop_id
       and bs.owner_id = (select auth.uid())
       and ss.plan_code in ('premium', 'definitivo')
-      and (ss.status = 'active' or (ss.status = 'trialing' and ss.trial_ends_at > now()))
+      and ((ss.status = 'active' and (ss.current_period_end is null or ss.current_period_end > now())) or (ss.status = 'trialing' and ss.trial_ends_at > now()))
   )
 )
 with check (
