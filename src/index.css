@@ -243,3 +243,69 @@
 .barber-commission-control strong{font-size:13px;color:var(--gold)}
 .barber-commission-control small{font-size:10px;color:var(--muted)}
 @media(max-width:760px){.barber-create-form{grid-template-columns:1fr 110px}.barber-create-form>input{grid-column:1/-1}.barber-create-form button{min-height:44px}.barber-commission-row{display:grid;grid-template-columns:38px minmax(0,1fr)}.barber-commission-row>.manage-main{min-width:0}.barber-commission-control{grid-column:2;text-align:left;grid-template-columns:1fr;min-width:0}.barber-commission-row>button{grid-column:2;justify-self:start}}
+
+
+/* Correções de usabilidade: zoom automático, menu e saída da conta */
+.sidebar{
+  overflow-y:auto;
+  overscroll-behavior:contain;
+  scrollbar-width:thin;
+}
+.sidebar .side-nav{flex:0 0 auto}
+.sidebar-bottom{
+  flex:0 0 auto;
+  padding-top:12px;
+  background:#171715;
+}
+.btn-logout{white-space:nowrap}
+.btn-logout svg{flex:0 0 auto}
+.dashboard-header,.dashboard-header>div,.header-actions{min-width:0}
+.header-actions{align-items:center;flex-wrap:wrap}
+.content-section,.panel,.metric-card,.manage-main{min-width:0}
+@media(max-width:760px){
+  /* 16px impede o zoom automático do Safari/iOS ao focar campos */
+  input,select,textarea{
+    font-size:16px !important;
+    line-height:1.35;
+    scroll-margin-top:90px;
+  }
+  .sidebar{
+    height:100dvh;
+    height:100vh;
+    padding-top:max(18px,env(safe-area-inset-top));
+    padding-bottom:max(18px,env(safe-area-inset-bottom));
+    overflow-x:hidden;
+    overflow-y:auto;
+    -webkit-overflow-scrolling:touch;
+  }
+  .sidebar-bottom{
+    position:sticky;
+    bottom:0;
+    margin-top:18px;
+    padding-bottom:8px;
+  }
+  .dashboard-header{
+    padding-top:max(13px,env(safe-area-inset-top));
+    flex-wrap:wrap;
+  }
+  .dashboard-header>div:nth-child(2){min-width:0}
+  .header-actions{
+    width:100%;
+    justify-content:flex-end;
+    gap:7px;
+  }
+  .header-actions .btn{min-height:40px}
+  .header-actions .btn-logout{
+    width:40px;
+    min-width:40px;
+    padding:9px;
+    font-size:0;
+  }
+  .header-actions .btn-logout span{display:none}
+  .dashboard-header h1{overflow-wrap:anywhere}
+  .manage-row{flex-wrap:wrap}
+  .manage-main{overflow-wrap:anywhere}
+}
+@media(hover:none) and (pointer:coarse){
+  button,a,.side-link{touch-action:manipulation}
+}
