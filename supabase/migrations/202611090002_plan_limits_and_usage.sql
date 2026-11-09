@@ -3,6 +3,9 @@
 
 begin;
 
+alter table public.shop_subscriptions
+  add column if not exists current_period_end timestamptz;
+
 create table if not exists public.shop_plan_usage (
   id uuid primary key default gen_random_uuid(),
   barbershop_id uuid not null references public.barbershops(id) on delete cascade,
