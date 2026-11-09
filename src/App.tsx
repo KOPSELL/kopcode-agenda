@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+ import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
 import {
   ArrowRight, CalendarDays, CheckCircle2, Clock3, Copy, LogOut,
@@ -201,7 +201,7 @@ function App() {
     setBusy(true)
     setError('')
     const { data: owned, error: ownedError } = await supabase
-      .from('barbershops').select('id,name,slug,phone,timezone,description,address,logo_url,cover_url,theme_color').eq('owner_id', userId).limit(1).maybeSingle()
+      .from('barbershops').select('id,name,slug,phone,timezone,description,address,logo_url,cover_url,theme_color').eq('owner_id', userId).order('created_at', { ascending: false }).limit(1).maybeSingle()
     if (ownedError) {
       setError(friendlyError(ownedError, 'Não foi possível carregar sua barbearia. Atualize a página e tente novamente.'))
       setBusy(false)
@@ -333,10 +333,25 @@ function App() {
         })
         if (authError) throw authError
         if (data.session && data.user) {
-          const { error: shopError } = await supabase.from('barbershops').insert({
-            owner_id: data.user.id, name: authShopName.trim(), slug: slugify(authShopName) + '-' + data.user.id.slice(0, 5),
-          })
-          if (shopError) throw shopError
+          // Antes de criar a barbearia, verifica se algum fluxo/trigger já criou uma para esta conta.
+          const { data: existingShop, error: existingShopError } = await supabase
+            .from('barbershops')
+            .select('id')
+            .eq('owner_id', data.user.id)
+            .limit(1)
+            .maybeSingle()
+
+          if (existingShopError) throw existingShopError
+
+          if (!existingShop) {
+            const { error: shopError } = await supabase.from('barbershops').insert({
+              owner_id: data.user.id,
+              name: authShopName.trim(),
+              slug: slugify(authShopName) + '-' + data.user.id.slice(0, 5),
+            })
+            if (shopError) throw shopError
+          }
+
           await loadDashboard(data.user.id)
           setNotice('Conta criada! Sua barbearia está pronta para configurar.')
         } else {
@@ -355,6 +370,28 @@ function App() {
     event.preventDefault()
     if (!session?.user?.id) return
     setBusy(true); setError('')
+
+    // Impede que a tela de configuração crie outra barbearia para a mesma conta.
+    const { data: existingShop, error: existingShopError } = await supabase
+      .from('barbershops')
+      .select('id')
+      .eq('owner_id', session.user.id)
+      .limit(1)
+      .maybeSingle()
+
+    if (existingShopError) {
+      setError(friendlyError(existingShopError))
+      setBusy(false)
+      return
+    }
+
+    if (existingShop) {
+      await loadDashboard(session.user.id)
+      setNotice('Sua conta já possui uma barbearia. Carregamos o cadastro existente.')
+      setBusy(false)
+      return
+    }
+
     const finalShopName = (shopNameInput || authShopName).trim()
     const slug = slugify(shopSlugInput || finalShopName)
     if (!finalShopName) { setError('Informe o nome da barbearia.'); setBusy(false); return }
