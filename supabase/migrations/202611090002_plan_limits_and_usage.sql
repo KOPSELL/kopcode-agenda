@@ -83,7 +83,7 @@ $$;
 
 drop trigger if exists barbers_enforce_plan_limit on public.barbers;
 create trigger barbers_enforce_plan_limit
-before insert or update of active on public.barbers
+before insert or update on public.barbers
 for each row execute function public.enforce_barber_plan_limit();
 
 create or replace function public.enforce_shop_identity_monthly_limit()
