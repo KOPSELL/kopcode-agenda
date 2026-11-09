@@ -341,3 +341,21 @@
  .completion-actions{display:grid;grid-template-columns:1fr 1fr}
  .completion-actions .btn{min-height:46px}
 }
+
+
+/* AgendaKopcode: planos, relatórios e financeiro */
+.agenda-full-banner{display:flex;align-items:center;gap:13px;padding:16px 19px;margin:0 0 16px;border:1px solid rgba(104,190,135,.35);background:rgba(72,148,99,.12);border-radius:12px;color:#a9e5bd}
+.agenda-full-banner>div{display:grid;gap:4px}.agenda-full-banner strong{font-size:12px;letter-spacing:1.3px}.agenda-full-banner span{font-size:11px;color:#c5d7c9}
+.appointment-report-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:4px 0 18px}
+.appointment-report-grid>div{display:grid;gap:7px;padding:15px;border:1px solid var(--line);border-radius:10px;background:#11110f;min-width:0}
+.appointment-report-grid small{font-size:10px;color:var(--muted)}.appointment-report-grid strong{font-size:14px;overflow-wrap:anywhere}.appointment-report-grid span{font-size:10px;color:var(--muted)}
+.completed-check{display:inline-block;vertical-align:middle;margin-right:4px;color:#9de0b3}
+.appointment-notes{color:#d9b77b!important;white-space:normal}.appointment-price{font-weight:700;color:#eee9df!important}
+.finance-chart-grid{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(240px,.8fr);gap:16px;margin-bottom:16px}
+.finance-bars{display:grid;gap:18px;margin-top:22px}.finance-bars>div{display:grid;grid-template-columns:1fr auto;gap:8px 14px;align-items:center}.finance-bars>div>span{font-size:11px;color:var(--muted)}.finance-bars>div>strong{font-size:12px}
+.finance-bar-track{grid-column:1/-1;height:12px;background:#292823;border-radius:99px;overflow:hidden}.finance-bar-track i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,#a98b58,#e2c38b);min-width:2px}.finance-bar-track.expense i{background:linear-gradient(90deg,#9c5c53,#d58b7d)}
+.profit-panel{display:flex;flex-direction:column;justify-content:center;gap:10px;background:linear-gradient(145deg,#1d241e,#191917)}.profit-panel>strong{font:800 clamp(26px,3vw,38px) var(--serif);color:#a9e5bd}.profit-panel p,.profit-panel small{margin:0;color:var(--muted);font-size:11px;line-height:1.65}
+.finance-advice{margin:16px 0 0;padding:15px;border-left:3px solid var(--gold);background:rgba(217,183,123,.07);border-radius:0 9px 9px 0;color:#d8d0c1;font-size:11px;line-height:1.7}
+.plan-locked-panel{display:flex;align-items:center;gap:16px;margin:18px 0}.plan-locked-panel>svg{color:var(--gold);flex-shrink:0}.plan-locked-panel>div{flex:1}.plan-locked-panel h3{margin:0 0 5px}.plan-locked-panel p{font-size:11px;color:var(--muted);margin:0;line-height:1.6}
+.upgrade-modal{max-width:480px}.upgrade-offer-copy{padding:18px;border:1px solid rgba(217,183,123,.2);border-radius:10px;background:rgba(217,183,123,.06)}.upgrade-offer-copy strong{font:700 20px var(--serif);color:var(--gold)}.upgrade-offer-copy p{font-size:12px;color:var(--muted);line-height:1.7;margin:9px 0 0}
+@media(max-width:760px){.finance-chart-grid{grid-template-columns:1fr}.appointment-report-grid{grid-template-columns:1fr}.plan-locked-panel{align-items:flex-start;flex-wrap:wrap}.plan-locked-panel .btn{width:100%}.finance-bars>div{grid-template-columns:1fr}.finance-bar-track{grid-column:1}.appointment-row{grid-template-columns:54px minmax(0,1fr) auto}.appointment-row select{grid-column:2/-1;max-width:none;width:100%}}
