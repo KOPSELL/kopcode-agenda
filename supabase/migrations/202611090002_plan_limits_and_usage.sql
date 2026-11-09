@@ -100,14 +100,16 @@ declare
   v_trial_ends_at timestamptz;
   v_period_end timestamptz;
   v_used integer := 0;
+  v_changes integer := 0;
 begin
   if tg_op <> 'UPDATE' then
     return new;
   end if;
 
-  if new.name is not distinct from old.name
-     and new.logo_url is not distinct from old.logo_url
-     and new.cover_url is not distinct from old.cover_url then
+  v_changes := (case when new.name is distinct from old.name then 1 else 0 end)
+             + (case when new.logo_url is distinct from old.logo_url then 1 else 0 end)
+             + (case when new.cover_url is distinct from old.cover_url then 1 else 0 end);
+  if v_changes = 0 then
     return new;
   end if;
 
@@ -134,12 +136,12 @@ begin
   where barbershop_id = new.id and usage_month = v_month
   for update;
 
-  if v_used >= v_limit then
+  if v_used + v_changes > v_limit then
     raise exception 'Seu plano permite % alterações de nome/foto por mês. Você já utilizou esse limite.', v_limit;
   end if;
 
   update public.shop_plan_usage
-  set identity_changes = identity_changes + 1,
+  set identity_changes = identity_changes + v_changes,
       updated_at = now()
   where barbershop_id = new.id and usage_month = v_month;
 
