@@ -49,6 +49,8 @@ begin
   where ss.barbershop_id = new.barbershop_id
   limit 1;
 
+  v_plan := coalesce(v_plan, 'inicio');
+  v_status := coalesce(v_status, 'trialing');
   if v_status not in ('active', 'trialing') then
     v_plan := 'inicio';
   end if;
