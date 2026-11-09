@@ -30,7 +30,28 @@ const localDate = (d: Date) => new Intl.DateTimeFormat('en-CA', { timeZone: 'Ame
 const formatDate = (value: string) => new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeZone: 'America/Sao_Paulo' }).format(new Date(value))
 const formatTime = (value: string) => new Intl.DateTimeFormat('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' }).format(new Date(value))
 const slugify = (value: string) => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
-const messageOf = (error: unknown) => error instanceof Error ? error.message : 'Ocorreu um erro. Tente novamente.'
+const friendlyError = (error: unknown, fallback = 'Não foi possível concluir esta operação. Confira os dados e tente novamente.') => {
+  const value = error as { message?: string; code?: string; details?: string } | null
+  const code = value?.code || ''
+  const raw = (value?.message || (error instanceof Error ? error.message : '') || '').toLowerCase()
+
+  if (code === '23505' || raw.includes('duplicate key') || raw.includes('already exists')) return 'Este cadastro já existe. Confira as informações e tente novamente.'
+  if (code === '23503' || raw.includes('foreign key')) return 'Não foi possível encontrar um dos dados relacionados. Atualize a página e tente novamente.'
+  if (code === '23502' || raw.includes('not-null')) return 'Preencha todos os campos obrigatórios.'
+  if (code === '23514' || raw.includes('check constraint')) return 'Um dos valores informados não é válido. Revise os campos.'
+  if (code === '42501' || raw.includes('row-level security') || raw.includes('permission denied')) return 'Você não tem permissão para realizar esta ação. Confira seu acesso à barbearia.'
+  if (raw.includes('email_exists') || raw.includes('already been registered') || raw.includes('user already registered')) return 'Este e-mail já está cadastrado em outra conta. Utilize outro e-mail ou solicite a recuperação do acesso existente.'
+  if (raw.includes('invalid login credentials')) return 'E-mail ou senha incorretos. Confira os dados e tente novamente.'
+  if (raw.includes('password') && (raw.includes('at least') || raw.includes('characters') || raw.includes('weak'))) return 'A senha precisa ter pelo menos 8 caracteres e atender aos requisitos de segurança.'
+  if (raw.includes('jwt') || raw.includes('token') || raw.includes('session')) return 'Sua sessão expirou. Entre novamente na sua conta.'
+  if (raw.includes('network') || raw.includes('fetch')) return 'Não foi possível conectar ao sistema. Verifique sua internet e tente novamente.'
+  if (raw.includes('período de teste terminou') || raw.includes('periodo de teste terminou')) return 'Seu período de teste terminou. Escolha um plano para continuar.'
+  if (raw.includes('assinatura inativa')) return 'Sua assinatura está inativa. Escolha um plano para continuar.'
+  if (raw.includes('permite até') || raw.includes('profissionais ativos')) return value?.message || 'Você atingiu o limite de profissionais do seu plano.'
+  if (raw.includes('duplicate') || raw.includes('unique constraint')) return 'Este cadastro já existe. Confira as informações e tente novamente.'
+  return fallback
+}
+const messageOf = (error: unknown) => friendlyError(error, 'Ocorreu um erro inesperado. Tente novamente em instantes.')
 const today = () => localDate(new Date())
 
 function Brand({ light = false }: { light?: boolean }) {
@@ -182,7 +203,7 @@ function App() {
     const { data: owned, error: ownedError } = await supabase
       .from('barbershops').select('id,name,slug,phone,timezone,description,address,logo_url,cover_url,theme_color').eq('owner_id', userId).limit(1).maybeSingle()
     if (ownedError) {
-      setError(ownedError.message)
+      setError(friendlyError(ownedError, 'Não foi possível carregar sua barbearia. Atualize a página e tente novamente.'))
       setBusy(false)
       return
     }
@@ -197,7 +218,7 @@ function App() {
         setShop(null)
         setBarberProfile(null)
         setBusy(false)
-        if (barberError) setError(barberError.message)
+        if (barberError) setError(friendlyError(barberError, 'Não foi possível carregar seu perfil. Entre novamente.'))
         return
       }
       const { data: assignedShop, error: assignedShopError } = await supabase
@@ -209,7 +230,7 @@ function App() {
         setShop(null)
         setBarberProfile(null)
         setBusy(false)
-        setError(assignedShopError?.message || 'Barbearia vinculada não encontrada.')
+        setError(friendlyError(assignedShopError, 'Barbearia vinculada não encontrada.'))
         return
       }
       const [{ data: ownAppointments, error: ownAppointmentsError }, { data: ownServices, error: ownServicesError }] = await Promise.all([
@@ -227,7 +248,7 @@ function App() {
       setBarbers([assignedBarber as Barber])
       setServices((ownServices || []) as Service[])
       setAppointments((ownAppointments || []) as Appointment[])
-      if (ownAppointmentsError || ownServicesError) setError(ownAppointmentsError?.message || ownServicesError?.message || 'Não foi possível carregar seus dados.')
+      if (ownAppointmentsError || ownServicesError) setError(friendlyError(ownAppointmentsError || ownServicesError, 'Não foi possível carregar seus dados.'))
       setBusy(false)
       return
     }
@@ -252,7 +273,7 @@ function App() {
       supabase.from('product_sales').select('id,product_name,quantity,unit_price,cost_at_sale,total,created_at').eq('barbershop_id', owned.id).order('created_at', { ascending: false }).limit(1000),
       supabase.from('shop_expenses').select('id,description,category,amount,expense_date').eq('barbershop_id', owned.id).order('expense_date', { ascending: false }).limit(1000),
     ])
-    if (b.error || s.error || a.error || categoriesResult.error || productsResult.error || salesResult.error || expensesResult.error) setError(b.error?.message || s.error?.message || a.error?.message || categoriesResult.error?.message || productsResult.error?.message || salesResult.error?.message || expensesResult.error?.message || 'Não foi possível carregar os dados.')
+    if (b.error || s.error || a.error || categoriesResult.error || productsResult.error || salesResult.error || expensesResult.error) setError(friendlyError(b.error || s.error || a.error || categoriesResult.error || productsResult.error || salesResult.error || expensesResult.error, 'Não foi possível carregar os dados.'))
     setBarbers((b.data || []) as Barber[])
     setServices((s.data || []) as Service[])
     setAppointments((a.data || []) as Appointment[])
@@ -342,7 +363,7 @@ function App() {
       owner_id: session.user.id, name: finalShopName, slug,
       phone: shopPhoneInput.trim() || null, timezone: 'America/Sao_Paulo',
     })
-    if (createError) setError(createError.code === '23505' ? 'Esse endereço já está sendo usado. Tente acrescentar seu bairro ou cidade.' : createError.message)
+    if (createError) setError(createError.code === '23505' ? 'Esse endereço já está sendo usado. Tente acrescentar seu bairro ou cidade.' : friendlyError(createError))
     else { setNotice('Barbearia criada com sucesso!'); await refreshDashboard() }
     setBusy(false)
   }
@@ -394,7 +415,7 @@ function App() {
       description: shopDescriptionInput.trim() || null, address: shopAddressInput.trim() || null,
       logo_url: shopLogoUrlInput || null, cover_url: shopCoverUrlInput || null, theme_color: shopThemeInput || '#d9b77b',
     }).eq('id', shop.id)
-    if (saveError) setError(saveError.code === '23505' ? 'Esse link já está sendo usado por outra barbearia.' : saveError.message)
+    if (saveError) setError(saveError.code === '23505' ? 'Esse link já está sendo usado por outra barbearia.' : friendlyError(saveError))
     else { setNotice('Configurações salvas.'); await refreshDashboard() }
     setBusy(false)
   }
@@ -404,7 +425,7 @@ function App() {
     if (!shop || !newBarberName.trim()) return
     setBusy(true); setError('')
     const { error: e } = await supabase.from('barbers').insert({ barbershop_id: shop.id, name: newBarberName.trim(), active: true, commission_percent: Number(newBarberCommission) })
-    if (e) setError(e.message)
+    if (e) setError(friendlyError(e))
     else { setNewBarberName(''); setNewBarberCommission('0'); setNotice('Profissional cadastrado.'); await refreshDashboard() }
     setBusy(false)
   }
@@ -420,7 +441,7 @@ function App() {
       body: { barber_id: barber.id, email: barberEmail.trim(), password: barberPassword },
     })
     if (invokeError || data?.error) {
-      setError(data?.error || invokeError?.message || 'Não foi possível criar o acesso.')
+      setError(friendlyError({ message: data?.error || invokeError?.message }, 'Não foi possível criar o acesso.'))
     } else {
       const link = data?.login_url || window.location.origin + '/barber'
       setBarberLoginLink(link)
@@ -440,7 +461,7 @@ function App() {
       barbershop_id: shop.id, name: newServiceName.trim(),
       price: Number(newServicePrice), duration_minutes: Number(newServiceDuration), active: true,
     })
-    if (e) setError(e.message)
+    if (e) setError(friendlyError(e))
     else { setNewServiceName(''); setNotice('Serviço cadastrado.'); await refreshDashboard() }
     setBusy(false)
   }
@@ -450,7 +471,7 @@ function App() {
     if (!shop || !newCategoryName.trim()) return
     setBusy(true); setError('')
     const { error: e } = await supabase.from('product_categories').insert({ barbershop_id: shop.id, name: newCategoryName.trim() })
-    if (e) setError(e.code === '23505' ? 'Esta categoria já existe.' : e.message)
+    if (e) setError(e.code === '23505' ? 'Esta categoria já existe.' : friendlyError(e))
     else { setNewCategoryName(''); setNotice('Categoria criada.'); await refreshDashboard() }
     setBusy(false)
   }
@@ -463,7 +484,7 @@ function App() {
       barbershop_id: shop.id, name: newProductName.trim(), category_id: newProductCategory || null,
       price: Number(newProductPrice), cost_price: Number(newProductCost), stock_quantity: Number(newProductStock), min_stock: Number(newProductMinStock), active: true,
     })
-    if (e) setError(e.message)
+    if (e) setError(friendlyError(e))
     else { setNewProductName(''); setNewProductPrice('0'); setNewProductCost('0'); setNewProductStock('0'); setNewProductMinStock('0'); setNotice('Produto cadastrado.'); await refreshDashboard() }
     setBusy(false)
   }
@@ -478,7 +499,7 @@ function App() {
       barbershop_id: shop.id, product_id: product.id, product_name: product.name,
       quantity: Number(saleQuantity), unit_price: product.price, sold_by: session?.user?.id || null,
     })
-    if (e) setError(e.message)
+    if (e) setError(friendlyError(e))
     else { setNotice('Venda registrada e estoque atualizado.'); setSaleQuantity('1'); await refreshDashboard() }
     setBusy(false)
   }
@@ -491,7 +512,7 @@ function App() {
       barbershop_id: shop.id, description: expenseDescription.trim(), category: expenseCategory,
       amount: Number(expenseAmount), expense_date: expenseDate,
     })
-    if (e) setError(e.message)
+    if (e) setError(friendlyError(e))
     else { setExpenseDescription(''); setExpenseAmount(''); setNotice('Despesa registrada.'); await refreshDashboard() }
     setBusy(false)
   }
@@ -501,7 +522,7 @@ function App() {
     const quantity = Number(value)
     if (!Number.isInteger(quantity) || quantity < 0) { setError('Informe uma quantidade inteira igual ou maior que zero.'); return }
     const { error: e } = await supabase.from('products').update({ stock_quantity: quantity }).eq('id', product.id).eq('barbershop_id', shop.id)
-    if (e) setError(e.message)
+    if (e) setError(friendlyError(e))
     else { setNotice('Estoque de ' + product.name + ' atualizado.'); await refreshDashboard() }
   }
 
@@ -510,20 +531,20 @@ function App() {
     const percent = Number(value)
     if (!Number.isFinite(percent) || percent < 0 || percent > 100) { setError('A comissão deve ficar entre 0% e 100%.'); return }
     const { error: e } = await supabase.from('barbers').update({ commission_percent: percent }).eq('id', barber.id).eq('barbershop_id', shop.id)
-    if (e) setError(e.message)
+    if (e) setError(friendlyError(e))
     else { setNotice('Comissão de ' + barber.name + ' atualizada.'); await refreshDashboard() }
   }
 
   const toggleActive = async (table: 'barbers' | 'services', item: Barber | Service) => {
     const { error: e } = await supabase.from(table).update({ active: !item.active }).eq('id', item.id).eq('barbershop_id', shop?.id)
-    if (e) setError(e.message)
+    if (e) setError(friendlyError(e))
     else await refreshDashboard()
   }
 
   const updateAppointmentStatus = async (appointment: Appointment, status: Appointment['status']) => {
     setError('')
     const { error: e } = await supabase.from('appointments').update({ status }).eq('id', appointment.id).eq('barbershop_id', shop?.id)
-    if (e) setError(e.message)
+    if (e) setError(friendlyError(e))
     else { setNotice('Status do atendimento atualizado.'); await refreshDashboard() }
   }
 
@@ -722,7 +743,7 @@ function App() {
 
   return <main className="app-shell"><aside className={mobileNav ? 'sidebar sidebar-open' : 'sidebar'}><div className="sidebar-brand"><Brand /><button className="icon-button sidebar-close" onClick={() => setMobileNav(false)}><X size={18} /></button></div><div className="sidebar-shop"><div className="shop-avatar">{shop.name.slice(0, 1).toUpperCase()}</div><div><strong>{shop.name}</strong><small>{shopPlan?.plan_code ? 'Plano ' + shopPlan.plan_code.toUpperCase() : 'Plano Início'}</small></div></div><nav className="side-nav">{navItems.map(item => <button key={item.id} className={tab === item.id ? 'side-link active' : 'side-link'} onClick={() => { setTab(item.id); setMobileNav(false) }}><item.icon size={18} />{item.label}</button>)}</nav><div className="sidebar-bottom"><div className="privacy-note"><ShieldCheck size={17} /><span>Seus dados são separados por barbearia.</span></div><button className="side-link" onClick={() => supabase.auth.signOut()}><LogOut size={18} /> Sair da conta</button></div></aside><div className="dashboard-area"><header className="dashboard-header"><button className="icon-button mobile-nav-trigger" onClick={() => setMobileNav(true)}><Menu /></button><div><span className="eyebrow">PAINEL DA BARBEARIA</span><h1>{navItems.find(i => i.id === tab)?.label}</h1></div><div className="header-actions"><button className="btn btn-outline btn-sm" type="button" onClick={enablePushNotifications}><CheckCircle2 size={15} /> Ativar notificações</button><a className="btn btn-outline btn-sm" href={'/b/' + shop.slug} target="_blank" rel="noreferrer"><ExternalLink size={15} /> Ver agenda</a><button className="btn btn-primary btn-sm" onClick={copyLink}><Share2 size={15} /> Compartilhar link</button></div></header>{error && <div className="alert alert-error dashboard-alert">{error}</div>}{notice && <div className="alert alert-success dashboard-alert"><CheckCircle2 size={16} />{notice}<button onClick={() => setNotice('')}><X size={14} /></button></div>}
     {tab === 'overview' && <section className="content-section"><div className="welcome-row"><div><h2>Bem-vindo à {shop.name}! 👋</h2><p>Olá, {session.user.user_metadata?.full_name || session.user.email?.split('@')[0]}. Aqui está o resumo da sua barbearia.</p></div><span className="date-chip"><CalendarDays size={16} /> {new Intl.DateTimeFormat('pt-BR', { dateStyle: 'full' }).format(new Date())}</span></div><div className="metric-grid"><article className="metric-card"><div><span>Atendimentos hoje</span><CalendarCheck size={18} /></div><strong>{todayAppointments.length}</strong><small>Agendamentos não cancelados</small></article><article className="metric-card"><div><span>Profissionais ativos</span><Users size={18} /></div><strong>{barbers.filter(b => b.active).length}</strong><small>Na sua equipe</small></article><article className="metric-card"><div><span>Serviços ativos</span><Scissors size={18} /></div><strong>{services.filter(s => s.active).length}</strong><small>Disponíveis para reserva</small></article><article className="metric-card"><div><span>Faturamento concluído</span><Wallet size={18} /></div><strong>{money(revenue)}</strong><small>Somente atendimentos concluídos</small></article></div><section className="panel business-insights"><div className="panel-title"><div><h3>Indicadores do negócio</h3><p>Resumo atualizado com os dados da agenda.</p></div><TrendingUp/></div><div className="insight-grid"><div><small>Taxa de faltas</small><strong>{noShowRate}%</strong><span>{noShowCount} falta(s) em {trackedAppointments.length} agendamento(s)</span></div><div><small>Serviço mais realizado</small><strong>{topService?.name || '—'}</strong><span>{topService?.total || 0} atendimento(s) concluído(s)</span></div><div><small>Maior faturamento por barbeiro</small><strong>{topBarber?.name || '—'}</strong><span>{money(topBarber?.total || 0)} em serviços concluídos</span></div></div></section><div className="content-grid"><section className="panel appointments-panel"><div className="panel-title"><div><h3>Próximos atendimentos</h3><p>Os próximos horários da agenda</p></div><button className="text-action" onClick={() => setTab('appointments')}>Ver agenda <ArrowRight size={15} /></button></div>{appointments.filter(a => a.status !== 'cancelled' && new Date(a.starts_at).getTime() >= Date.now()).slice(0, 5).map(a => <AppointmentRow key={a.id} a={a} barbers={barbers} services={services} onStatus={updateAppointmentStatus} />)}{appointments.filter(a => a.status !== 'cancelled' && new Date(a.starts_at).getTime() >= Date.now()).length === 0 && <div className="empty-state"><CalendarDays size={26} /><h3>Nenhum atendimento próximo</h3><p>Compartilhe seu link para começar a receber agendamentos.</p><button className="btn btn-outline" onClick={copyLink}><Copy size={15} /> Copiar link</button></div>}</section><section className="panel quick-panel"><div className="panel-title"><div><h3>Comece por aqui</h3><p>Deixe sua agenda pronta</p></div><Sparkles size={18} /></div><button className="quick-action" onClick={() => setTab('services')}><span><Scissors /></span><div><strong>Cadastre seus serviços</strong><small>Preço e duração de cada atendimento</small></div><ArrowRight /></button><button className="quick-action" onClick={() => setTab('barbers')}><span><Users /></span><div><strong>Adicione profissionais</strong><small>Organize sua equipe</small></div><ArrowRight /></button><button className="quick-action" onClick={copyLink}><span><LinkIcon /></span><div><strong>Compartilhe sua agenda</strong><small>Envie o link aos seus clientes</small></div><ArrowRight /></button><div className="share-box"><span>SEU LINK PÚBLICO</span><code>{window.location.host}/b/{shop.slug}</code><button className="btn btn-primary btn-full" onClick={copyLink}><Copy size={15} /> Copiar link de agendamento</button></div></section></div></section>}
-    {tab === 'crm' && <section className="content-section"><div className="page-intro"><div><h2>Relacionamento e fidelização</h2><p>Histórico, preferências e frequência dos seus clientes.</p></div></div><div className="metric-grid"><article className="metric-card"><div><span>Clientes</span><Users size={18}/></div><strong>{crmCustomers.length}</strong><small>Cadastros identificados</small></article><article className="metric-card"><div><span>Recorrentes</span><TrendingUp size={18}/></div><strong>{crmCustomers.filter(c => c.total_visits > 1).length}</strong><small>Mais de uma visita concluída</small></article><article className="metric-card"><div><span>Faltas</span><CalendarDays size={18}/></div><strong>{crmCustomers.reduce((n,c) => n + c.no_show_count, 0)}</strong><small>Registros de no-show</small></article><article className="metric-card"><div><span>Pontos</span><Sparkles size={18}/></div><strong>{crmCustomers.reduce((n,c) => n + c.loyalty_points, 0)}</strong><small>1 ponto por corte concluído</small></article></div><section className="panel"><h3>Histórico dos clientes</h3><p className="muted">Edite as observações para guardar preferências, cuidados e detalhes importantes.</p>{crmCustomers.map(c => <div className="manage-row crm-row" key={c.id}><span className="manage-avatar"><Users size={17}/></span><div className="manage-main"><strong>{c.full_name}</strong><small>{c.phone} · {c.total_visits} visita(s) · {c.no_show_count} falta(s)</small><small>Preferências: {c.preferred_services?.join(', ') || 'Ainda sem histórico'}</small><label className="crm-notes">Observações<textarea rows={2} defaultValue={c.notes || ''} placeholder="Ex.: pele sensível; prefere tesoura mais alta no topo..." onBlur={async e => { const value=e.currentTarget.value; if(value!==c.notes){const {error:err}=await supabase.from('crm_customers').update({notes:value,updated_at:new Date().toISOString()}).eq('id',c.id).eq('barbershop_id',shop.id); if(err)setError(err.message); else {setCrmCustomers(old=>old.map(x=>x.id===c.id?{...x,notes:value}:x));setNotice('Observações atualizadas.')}}}} /></label></div><div className="crm-points"><strong>{c.loyalty_points}/10</strong><small>pontos</small><div className="loyalty-track"><span style={{width:(c.loyalty_points%10*10)+'%'}}/></div><small>{Math.floor(c.loyalty_points/10)} recompensa(s)</small><a href={'https://wa.me/'+c.phone.replace(/\D/g,'')} target="_blank" rel="noreferrer">WhatsApp</a></div></div>)}{crmCustomers.length===0 && <div className="empty-state"><Users size={28}/><h3>Seus clientes aparecerão aqui</h3><p>Os clientes serão cadastrados automaticamente quando agendarem pelo link público.</p></div>}</section><p className="muted">Fidelidade: cada atendimento concluído soma 1 ponto. A cada 10 pontos, o cliente fica elegível a uma recompensa, concedida manualmente pela barbearia.</p></section>}
+    {tab === 'crm' && <section className="content-section"><div className="page-intro"><div><h2>Relacionamento e fidelização</h2><p>Histórico, preferências e frequência dos seus clientes.</p></div></div><div className="metric-grid"><article className="metric-card"><div><span>Clientes</span><Users size={18}/></div><strong>{crmCustomers.length}</strong><small>Cadastros identificados</small></article><article className="metric-card"><div><span>Recorrentes</span><TrendingUp size={18}/></div><strong>{crmCustomers.filter(c => c.total_visits > 1).length}</strong><small>Mais de uma visita concluída</small></article><article className="metric-card"><div><span>Faltas</span><CalendarDays size={18}/></div><strong>{crmCustomers.reduce((n,c) => n + c.no_show_count, 0)}</strong><small>Registros de no-show</small></article><article className="metric-card"><div><span>Pontos</span><Sparkles size={18}/></div><strong>{crmCustomers.reduce((n,c) => n + c.loyalty_points, 0)}</strong><small>1 ponto por corte concluído</small></article></div><section className="panel"><h3>Histórico dos clientes</h3><p className="muted">Edite as observações para guardar preferências, cuidados e detalhes importantes.</p>{crmCustomers.map(c => <div className="manage-row crm-row" key={c.id}><span className="manage-avatar"><Users size={17}/></span><div className="manage-main"><strong>{c.full_name}</strong><small>{c.phone} · {c.total_visits} visita(s) · {c.no_show_count} falta(s)</small><small>Preferências: {c.preferred_services?.join(', ') || 'Ainda sem histórico'}</small><label className="crm-notes">Observações<textarea rows={2} defaultValue={c.notes || ''} placeholder="Ex.: pele sensível; prefere tesoura mais alta no topo..." onBlur={async e => { const value=e.currentTarget.value; if(value!==c.notes){const {error:err}=await supabase.from('crm_customers').update({notes:value,updated_at:new Date().toISOString()}).eq('id',c.id).eq('barbershop_id',shop.id); if(err)setError(friendlyError(err, 'Não foi possível atualizar as observações do cliente.')); else {setCrmCustomers(old=>old.map(x=>x.id===c.id?{...x,notes:value}:x));setNotice('Observações atualizadas.')}}}} /></label></div><div className="crm-points"><strong>{c.loyalty_points}/10</strong><small>pontos</small><div className="loyalty-track"><span style={{width:(c.loyalty_points%10*10)+'%'}}/></div><small>{Math.floor(c.loyalty_points/10)} recompensa(s)</small><a href={'https://wa.me/'+c.phone.replace(/\D/g,'')} target="_blank" rel="noreferrer">WhatsApp</a></div></div>)}{crmCustomers.length===0 && <div className="empty-state"><Users size={28}/><h3>Seus clientes aparecerão aqui</h3><p>Os clientes serão cadastrados automaticamente quando agendarem pelo link público.</p></div>}</section><p className="muted">Fidelidade: cada atendimento concluído soma 1 ponto. A cada 10 pontos, o cliente fica elegível a uma recompensa, concedida manualmente pela barbearia.</p></section>}
     {tab === 'appointments' && <section className="content-section"><div className="page-intro"><div><h2>Agenda de atendimentos</h2><p>Consulte e atualize o status dos agendamentos recebidos.</p></div><label className="date-filter">Filtrar dia<input type="date" value={appointmentDate} onChange={e => setAppointmentDate(e.target.value)} /></label></div><section className="panel"><div className="panel-title"><div><h3>{shopAppointments.length} atendimento(s)</h3><p>{formatDate(appointmentDate + 'T12:00:00-03:00')}</p></div><CalendarDays /></div>{shopAppointments.map(a => <AppointmentRow key={a.id} a={a} barbers={barbers} services={services} onStatus={updateAppointmentStatus} />)}{shopAppointments.length === 0 && <div className="empty-state"><CalendarDays size={28} /><h3>Dia sem agendamentos</h3><p>Os novos horários aparecerão aqui automaticamente.</p></div>}</section></section>}
     {tab === 'barbers' && <section className="content-section"><div className="page-intro"><div><h2>Profissionais</h2><p>Cadastre a equipe, defina a comissão individual e acompanhe o valor calculado sobre os serviços concluídos no mês selecionado em Contabilidade.</p></div></div><section className="panel"><h3>Adicionar profissional</h3><form className="inline-form barber-create-form" onSubmit={addBarber}><input required value={newBarberName} onChange={e => setNewBarberName(e.target.value)} placeholder="Nome do profissional" /><label>Comissão (%)<input aria-label="Comissão do novo profissional" type="number" min="0" max="100" step="0.5" value={newBarberCommission} onChange={e => setNewBarberCommission(e.target.value)} /></label><button className="btn btn-primary" disabled={busy}><Plus size={16} /> Adicionar</button></form><div className="manage-list">{barbers.map(b => { const completed = appointments.filter(a => a.status === 'completed' && a.barber_id === b.id && localDate(new Date(a.starts_at)).slice(0, 7) === accountingMonth); const base = completed.reduce((sum, a) => sum + Number(a.price_at_booking ?? services.find(s => s.id === a.service_id)?.price ?? 0), 0); const commission = base * Number(b.commission_percent || 0) / 100; return <div className="manage-row barber-commission-row" key={b.id}><span className="manage-avatar">{b.photo_url ? <img className="mini-photo" src={b.photo_url} alt={b.name} /> : <Scissors size={17} />}</span><div className="manage-main"><strong>{b.name}</strong><small>{b.active ? 'Visível na agenda pública' : 'Inativo — não recebe reservas'}</small><small>Serviços concluídos: {money(base)} · Comissão calculada: {money(commission)}</small><label className="photo-upload"><ImagePlus size={14} /> {b.photo_url ? 'Trocar foto' : 'Adicionar foto'}<input type="file" accept="image/*" onChange={e => { void updateProfilePhoto('barbers', b, e.target.files?.[0]); e.currentTarget.value = '' }} /></label></div><div className="barber-commission-control"><label>Comissão (%)<input aria-label={'Comissão de ' + b.name} type="number" min="0" max="100" step="0.5" defaultValue={b.commission_percent ?? 0} onBlur={e => { if (Number(e.currentTarget.value) !== Number(b.commission_percent || 0)) void saveCommission(b, e.currentTarget.value) }} /></label><strong>{Number(b.commission_percent || 0)}% = {money(commission)}</strong><small>Sobre {money(base)} em serviços</small>{b.user_id ? <small className="status-pill status-completed">Acesso individual ativo</small> : <form className="form-stack" onSubmit={e => createBarberAccess(e, b)}><label>E-mail de acesso<input type="email" required value={barberEmail} onChange={e => setBarberEmail(e.target.value)} placeholder="profissional@email.com" /></label><label>Senha inicial<input type="password" required minLength={8} value={barberPassword} onChange={e => setBarberPassword(e.target.value)} placeholder="Mínimo de 8 caracteres" /></label><button className="btn btn-outline btn-sm" disabled={busy}><ShieldCheck size={14} /> Criar acesso do barbeiro</button></form>}</div><button className={b.active ? 'btn btn-outline btn-sm' : 'btn btn-primary btn-sm'} onClick={() => toggleActive('barbers', b)}>{b.active ? 'Desativar' : 'Ativar'}</button></div>})}{barbers.length === 0 && <div className="empty-state"><Users size={28} /><p>Nenhum profissional cadastrado ainda.</p></div>}</div>{barberLoginLink && <div className="alert alert-success">Link do painel do profissional: <a href={barberLoginLink}>{barberLoginLink}</a></div>}</section></section>}
     {tab === 'services' && <section className="content-section"><div className="page-intro"><div><h2>Serviços e preços</h2><p>Defina o que seus clientes podem reservar.</p></div></div><section className="panel"><h3>Adicionar serviço</h3><form className="service-form" onSubmit={addService}><label>Nome do serviço<input required value={newServiceName} onChange={e => setNewServiceName(e.target.value)} placeholder="Ex.: Corte tradicional" /></label><label>Preço (R$)<input required type="number" min="0" step="0.01" value={newServicePrice} onChange={e => setNewServicePrice(e.target.value)} /></label><label>Duração<select value={newServiceDuration} onChange={e => setNewServiceDuration(e.target.value)}>{[10,15,20,30,40,45,60,75,90,120].map(n => <option key={n} value={n}>{n} minutos</option>)}</select></label><button className="btn btn-primary" disabled={busy}><Plus size={16} /> Cadastrar serviço</button></form><div className="manage-list">{services.map(s => <div className="manage-row" key={s.id}><span className="manage-avatar">{s.photo_url ? <img className="mini-photo" src={s.photo_url} alt={s.name} /> : <Scissors size={17} />}</span><div className="manage-main"><strong>{s.name}</strong><small>{s.duration_minutes} minutos · {money(s.price)} · {s.active ? 'Ativo' : 'Inativo'}</small><label className="photo-upload"><ImagePlus size={14} /> {s.photo_url ? 'Trocar foto' : 'Adicionar foto'}<input type="file" accept="image/*" onChange={e => { void updateProfilePhoto('services', s, e.target.files?.[0]); e.currentTarget.value = '' }} /></label></div><button className={s.active ? 'btn btn-outline btn-sm' : 'btn btn-primary btn-sm'} onClick={() => toggleActive('services', s)}>{s.active ? 'Desativar' : 'Ativar'}</button></div>)}{services.length === 0 && <div className="empty-state"><Scissors size={28} /><p>Nenhum serviço cadastrado ainda.</p></div>}</div></section></section>}
