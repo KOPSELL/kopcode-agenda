@@ -359,3 +359,7 @@
 .plan-locked-panel{display:flex;align-items:center;gap:16px;margin:18px 0}.plan-locked-panel>svg{color:var(--gold);flex-shrink:0}.plan-locked-panel>div{flex:1}.plan-locked-panel h3{margin:0 0 5px}.plan-locked-panel p{font-size:11px;color:var(--muted);margin:0;line-height:1.6}
 .upgrade-modal{max-width:480px}.upgrade-offer-copy{padding:18px;border:1px solid rgba(217,183,123,.2);border-radius:10px;background:rgba(217,183,123,.06)}.upgrade-offer-copy strong{font:700 20px var(--serif);color:var(--gold)}.upgrade-offer-copy p{font-size:12px;color:var(--muted);line-height:1.7;margin:9px 0 0}
 @media(max-width:760px){.finance-chart-grid{grid-template-columns:1fr}.appointment-report-grid{grid-template-columns:1fr}.plan-locked-panel{align-items:flex-start;flex-wrap:wrap}.plan-locked-panel .btn{width:100%}.finance-bars>div{grid-template-columns:1fr}.finance-bar-track{grid-column:1}.appointment-row{grid-template-columns:54px minmax(0,1fr) auto}.appointment-row select{grid-column:2/-1;max-width:none;width:100%}}
+
+
+.plan-status-strip{display:flex;align-items:center;gap:10px;margin:14px clamp(22px,4vw,48px) 0;padding:11px 14px;border:1px solid rgba(217,183,123,.22);border-radius:9px;background:rgba(217,183,123,.07);color:var(--gold);font-size:11px}
+.plan-status-strip span{flex:1;color:#ded5c4}.plan-status-strip button{border:0;background:transparent;color:var(--gold);font-size:11px;font-weight:700;white-space:nowrap}
