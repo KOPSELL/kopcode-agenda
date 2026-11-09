@@ -270,8 +270,8 @@
     scroll-margin-top:90px;
   }
   .sidebar{
-    height:100dvh;
     height:100vh;
+    height:100dvh;
     padding-top:max(18px,env(safe-area-inset-top));
     padding-bottom:max(18px,env(safe-area-inset-bottom));
     overflow-x:hidden;
