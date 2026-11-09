@@ -483,7 +483,8 @@ function App() {
   const saveShop = async (event: React.FormEvent) => {
     event.preventDefault()
     if (!shop) return
-    if (shopNameInput.trim() !== shop.name && monthlyIdentityChanges >= currentPlanLimit.identityChanges) { showUpgradeOffer('Alterar nome da barbearia', `Você utilizou ${monthlyIdentityChanges} de ${currentPlanLimit.identityChanges} alterações neste mês.`, 'premium'); return }
+    const pendingIdentityChanges = Number(shopNameInput.trim() !== shop.name) + Number(shopLogoUrlInput !== (shop.logo_url || '')) + Number(shopCoverUrlInput !== (shop.cover_url || ''))
+    if (monthlyIdentityChanges + pendingIdentityChanges > currentPlanLimit.identityChanges) { showUpgradeOffer('Alterar nome ou fotos da barbearia', `Esta atualização usaria ${pendingIdentityChanges} alteração(ões). Você já utilizou ${monthlyIdentityChanges} de ${currentPlanLimit.identityChanges} neste mês.`, 'premium'); return }
     setBusy(true); setError('')
     const { error: saveError } = await supabase.from('barbershops').update({
       name: shopNameInput.trim(), slug: slugify(shopSlugInput), phone: shopPhoneInput.trim() || null,
