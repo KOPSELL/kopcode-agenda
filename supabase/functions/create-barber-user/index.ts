@@ -97,9 +97,25 @@ Deno.serve(async (req) => {
     }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (error) {
     console.error("create-barber-user:", error);
-    const message = error instanceof Error ? error.message : "Não foi possível criar o acesso.";
+    const rawMessage = error instanceof Error ? error.message : "";
+    const errorCode = (error as { code?: string })?.code || "";
+    let message = "Não foi possível criar o acesso agora. Confira os dados e tente novamente.";
+    let status = 400;
+
+    if (errorCode === "email_exists" || /already been registered|email_exists/i.test(rawMessage)) {
+      message = "Este e-mail já está cadastrado em outra conta. Utilize outro e-mail ou solicite a recuperação do acesso existente.";
+      status = 409;
+    } else if (/invalid.*email|email.*invalid/i.test(rawMessage)) {
+      message = "O e-mail informado não parece válido. Confira e tente novamente.";
+    } else if (/password/i.test(rawMessage)) {
+      message = "A senha não atende aos requisitos de segurança. Utilize uma senha com pelo menos 8 caracteres.";
+    } else if (/rate limit|too many requests/i.test(rawMessage)) {
+      message = "Muitas tentativas em pouco tempo. Aguarde alguns minutos e tente novamente.";
+      status = 429;
+    }
+
     return new Response(JSON.stringify({ error: message }), {
-      status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 });
