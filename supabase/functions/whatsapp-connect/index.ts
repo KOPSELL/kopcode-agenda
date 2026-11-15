@@ -57,18 +57,17 @@ Deno.serve(async (req) => {
       return json({ error: "Você não tem permissão para conectar o WhatsApp desta barbearia." }, 403);
     }
 
+    // Se já existe um vínculo no banco, reutiliza o mesmo nome de instância.
+    // Isso recria a instância removida na Evolution sem duplicar o vínculo da loja.
     const { data: existing, error: existingError } = await admin
       .from("whatsapp_connections")
-      .select("id,instance_name,active")
+      .select("id,instance_name")
       .eq("barbershop_id", barbershopId)
       .maybeSingle();
     if (existingError) throw existingError;
-    if (existing) {
-      return json({ error: "Esta barbearia já possui uma conexão cadastrada. Use a opção de reconectar." }, 409);
-    }
 
-    // Nome técnico gerado no servidor: o cliente nunca escolhe a instância.
-    const instanceName = "ak-" + barbershopId.replace(/-/g, "").slice(0, 20);
+    const instanceName = existing?.instance_name ||
+      ("ak-" + barbershopId.replace(/-/g, "").slice(0, 20));
 
     const createResponse = await fetch(evolutionUrl + "/instance/create", {
       method: "POST",
@@ -82,7 +81,7 @@ Deno.serve(async (req) => {
     const createPayload = await createResponse.json().catch(() => ({}));
     if (!createResponse.ok) {
       console.error("Evolution create instance failed:", createResponse.status);
-      return json({ error: "A Evolution API não conseguiu criar a conexão. Verifique o serviço e tente novamente." }, 502);
+      return json({ error: "A Evolution não conseguiu criar a nova instância. Confira se já existe uma instância com esse nome na Evolution." }, 502);
     }
 
     const webhookResponse = await fetch(evolutionUrl + "/webhook/set/" + encodeURIComponent(instanceName), {
@@ -117,18 +116,23 @@ Deno.serve(async (req) => {
       return json({ error: "A Evolution criou a instância, mas não retornou o QR Code. Tente novamente." }, 502);
     }
 
-    const { error: insertError } = await admin.from("whatsapp_connections").insert({
+    const connectionData = {
       barbershop_id: barbershopId,
       instance_name: instanceName,
       active: true,
-    });
-    if (insertError) {
+      updated_at: new Date().toISOString(),
+    };
+
+    const saveResult = existing
+      ? await admin.from("whatsapp_connections").update(connectionData).eq("id", existing.id)
+      : await admin.from("whatsapp_connections").insert(connectionData);
+
+    if (saveResult.error) {
       await fetch(evolutionUrl + "/instance/delete/" + encodeURIComponent(instanceName), {
         method: "DELETE",
         headers: { apikey: evolutionKey },
       }).catch(() => undefined);
-      if (insertError.code === "23505") return json({ error: "Esta barbearia já possui uma conexão WhatsApp." }, 409);
-      throw insertError;
+      throw saveResult.error;
     }
 
     return json({
@@ -136,7 +140,7 @@ Deno.serve(async (req) => {
       instance_name: instanceName,
       qrcode: qr,
       pairing_code: createPayload?.qrcode?.pairingCode || null,
-      message: "Leia o QR Code com o WhatsApp da barbearia.",
+      message: "Nova sessão criada. Leia o QR Code com o WhatsApp da barbearia.",
     });
   } catch (error) {
     console.error("whatsapp-connect:", error);
